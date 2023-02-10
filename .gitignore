@@ -1,0 +1,38 @@
+# cache
+__pycache__
+.env
+.mypy_cache
+*.pyc
+*.pyo
+
+# settings
+winko.toml
+
+# credentials
+*.crt
+*.key
+*.pem
+24hrs.token
+
+# transaction data
+*.db
+*.log
+*.pickle
+
+# development
+*.code-workspace
+
+# develop enviroments
+env/
+venv/
+.venv/
+env*
+dist/
+build/
+*.egg
+*.egg-info/
+.tox/
+.cache/
+.pytest_cache/
+.vscode
+
