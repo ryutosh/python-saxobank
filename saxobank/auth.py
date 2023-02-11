@@ -1,19 +1,11 @@
 import logging
 
 # --
-# import pydantic
-
-# --
-from winko.protos import auth_pb2
+from winkorpc import auth_pb2
 
 # from winko import exceptions
 # from winko import saxobank_request_dispatcher
 from . import saxobank_request_dispatcher
-
-# from winko.saxobank import dispatcher
-
-# from winko.saxobank import models
-
 
 logger = logging.getLogger(__name__)
 

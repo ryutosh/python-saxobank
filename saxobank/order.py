@@ -13,9 +13,6 @@ from . import ServiceState, models
 from . import request as saxo_req
 from . import service_state
 
-# from winko.protos import order_pb2, saxobank_pb2
-
-
 # from pydantic import parse_obj_as
 
 log = getLogger(__name__)

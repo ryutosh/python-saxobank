@@ -1,7 +1,5 @@
 from decimal import Decimal
 
-from pydantic import ValidationError
-
 from saxobank import models, order
 
 
@@ -15,15 +13,15 @@ def test_ticker_amount_float_type():
     assert v == r
 
 
-def test_ticker_amount_decimal_type():
-    # ref model
-    ref = models.InstrumentsDetailsResponse()
+# def test_ticker_amount_decimal_type():
+#     # ref model
+#     ref = models.InstrumentsDetailsResponse()
 
-    # decimal value
-    f_amount = [1.2345678, 12345678.9, 0.0000, 0]
-    d_amount = [Decimal(str(x)) for x in f_amount]
-    r_amount = [order.conform_amount(ref, x) for x in d_amount]
-    assert d_amount == r_amount
+#     # decimal value
+#     f_amount = [1.2345678, 12345678.9, 0.0000, 0]
+#     d_amount = [Decimal(str(x)) for x in f_amount]
+#     r_amount = [order.conform_amount(ref, x) for x in d_amount]
+#     assert d_amount == r_amount
 
 
 def test_ticker_amount_decimal_type():
