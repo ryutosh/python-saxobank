@@ -261,7 +261,7 @@ async def check_order(
     return True, ""
 
 
-async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None, ensure_price_range=None):
+async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None, ensure_price_range=None) -> OrderResult:
 
     # TODO!: Check if account has authorized
 
@@ -358,15 +358,15 @@ async def close(winko_id, position_id, external_reference: str = None):
     amount = abs(amount_signed)
     buy_sell = models.BuySell.Buy if amount_signed < 0 else models.BuySell.Sell
 
-    if (
-        positions_res.PositionBase.IsForceOpen
-        or not positions_res.PositionBase.IsMarketOpen
-        or positions_res.PositionBase.Status != models.PositionStatus.Open
-    ):
+    if positions_res.PositionBase.IsForceOpen or not positions_res.PositionBase.IsMarketOpen:
         log.debug(
-            f"Can't continue to order because of Position or Market state. ForceOpen:{positions_res.PositionBase.IsForceOpen}, MarketOpen:{positions_res.PositionBase.IsMarketOpen}, PositionStatus:{positions_res.PositionBase.Status}"
+            f"Can't continue to order because of Market state. ForceOpen:{positions_res.PositionBase.IsForceOpen}, MarketOpen:{positions_res.PositionBase.IsMarketOpen}"
         )
         raise exceptions.NotTradableError()
+
+    if positions_res.PositionBase.Status != models.PositionStatus.Open:
+        log.debug(f"Can't continue to order because of Position state. PositionStatus:{positions_res.PositionBase.Status}")
+        raise exceptions.PositionNotFoundError(position_id=position_id)
 
     # Make close request
     try:
@@ -394,7 +394,19 @@ async def close(winko_id, position_id, external_reference: str = None):
         log.error(f"Orders request was not valid. Error: {ex}")
         raise exceptions.OrderError(status=None)
 
-    return await order_entry(winko_id, orders_main)
+    order_res = await order_entry(winko_id, orders_main)
+
+    if (
+        (error_info := order_res.error_info)
+        and (error_code := error_info.error_code)
+        and error_code == "OrderRelatedPositionIsClosed"
+    ):
+        log.debug(
+            f"Position related order was placed, but position was already closed. PositionStatus:{positions_res.PositionBase.Status}"
+        )
+        raise exceptions.PositionNotFoundError(position_id=position_id)
+
+    return order_res
 
 
 async def market(
@@ -532,4 +544,10 @@ async def modify(winko_id, order_id, quantity=None, price=None, stop_limit=None,
         order_new.TrailingStopStep = trailing_step
 
     # Send order request
-    return await order_entry(winko_id, order_new, False)
+    order_res = await order_entry(winko_id, order_new, False)
+
+    if (error_info := order_res.error_info) and (error_code := error_info.error_code) and error_code == "OrderNotFound":
+        log.debug(f"Order modification was issued, but order was not found. OrderId:{order_id}")
+        raise exceptions.OrderNotFoundError(order_id=order_id)
+
+    return order_res
