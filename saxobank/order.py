@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from logging import getLogger
-from typing import Tuple
+from typing import Optional, Tuple
 
 from pydantic import ValidationError
 from winko import exceptions
@@ -78,7 +78,7 @@ def conform_amount(ref_data: models.InstrumentsDetailsResponse, amount_orig: Dec
     return round(amount_orig, ref_data.AmountDecimals) if ref_data.AmountDecimals is not None else amount_orig
 
 
-def conform_price_to_format(format_data: models.PriceDisplayFormatResponse, price_orig: Decimal):
+def conform_price_to_format(format_data: Optional[models.PriceDisplayFormatResponse], price_orig: Decimal):
     if format_data.Format and format_data.Format != models.PriceDisplayFormatType.Normal:
         # Not implemented
         raise NotImplementedError()
@@ -90,31 +90,34 @@ def conform_price_to_tick_size(tick_size: Decimal, price_orig: Decimal):
     return round(price_orig / tick_size) * tick_size
 
 
-def conform_price_to_tick_size_scheme(scheme_data: models.TickSizeSchemeResponse, price_orig: Decimal):
-    elements = sorted(scheme_data.Elements or [], key=lambda e: e.HighPrice)
-    for high_price, tick_size in elements.items():
-        if price_orig <= high_price:
-            return conform_price_to_tick_size(tick_size, price_orig)
+def tick_size_from_scheme(scheme_data: models.TickSizeSchemeResponse, price_orig: Decimal):
+    elements = sorted([] if scheme_data.Elements is None else scheme_data.Elements, key=lambda e: e.HighPrice)
+    for element in elements:
+        if price_orig <= element.HighPrice:
+            return element.TickSize
 
-    return conform_price_to_tick_size(scheme_data.DefaultTickSize, price_orig) if scheme_data.DefaultTickSize else price_orig
+    return scheme_data.DefaultTickSize if scheme_data.DefaultTickSize else None  # SHOULD rise error, not None
 
 
 def conform_price(
     ref_data: models.InstrumentsDetailsResponse, price_orig: Decimal, order_type=models.PlaceableOrderType.Market
 ):
+    tick_size = None
 
     if scheme := ref_data.TickSizeScheme:
-        return conform_price_to_tick_size_scheme(scheme, price_orig)
+        tick_size = tick_size_from_scheme(scheme, price_orig)
 
-    tick_size = (
-        ref_data.TickSizeStopOrder
-        if ref_data.TickSizeStopOrder is not None and order_type.is_stop()
-        else ref_data.TickSizeLimitOrder
-        if ref_data.TickSizeLimitOrder is not None and order_type.is_limit()
-        else ref_data.TickSize
-        if ref_data.TickSize is not None
-        else None
-    )
+    if tick_size is None:
+        tick_size = (
+            ref_data.TickSizeStopOrder
+            if ref_data.TickSizeStopOrder is not None and order_type.is_stop()
+            else ref_data.TickSizeLimitOrder
+            if ref_data.TickSizeLimitOrder is not None and order_type.is_limit()
+            else ref_data.TickSize
+            if ref_data.TickSize is not None
+            else None
+        )
+
     if tick_size:
         return conform_price_to_tick_size(tick_size, price_orig)
 
@@ -291,12 +294,14 @@ async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None
             raise exceptions.OrderError()
 
         if infoprices_res.Quote.DelayedByMinutes:
+            log.info(f"Price info delayed: {infoprices_res.Quote}")
             raise exceptions.OrderEnsurePriceNotGuaranteedError(
                 market_price="can not determine", p1=ensure_price_range[0], p2=ensure_price_range[1]
             )
 
         market_price = infoprices_res.Quote.Mid
         if not market_price or not (ensure_price_range[0] <= market_price <= ensure_price_range[1]):
+            log.info(f"Price not in ensured range: {infoprices_res.Quote}")
             raise exceptions.OrderEnsurePriceNotGuaranteedError(
                 market_price=market_price, p1=ensure_price_range[0], p2=ensure_price_range[1]
             )
