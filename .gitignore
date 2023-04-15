@@ -21,6 +21,7 @@ winko.toml
 
 # development
 *.code-workspace
+.jupyter
 
 # develop enviroments
 env/
