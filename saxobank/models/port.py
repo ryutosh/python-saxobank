@@ -115,6 +115,7 @@ class PortClientsMeRes(SaxobankModel):
     DefaultAccountId: str
     DefaultAccountKey: AccountKey
     PositionNettingMode: e.ClientPositionNettingMode
+    ClientPositionNettingProfile: e.ClientPositionNettingProfile
 
 
 class PositionsMeResponse(SaxobankModel):

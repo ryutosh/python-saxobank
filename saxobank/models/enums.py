@@ -19,6 +19,12 @@ class ClientPositionNettingMode(str, Enum):
     Intraday = "Intraday"
 
 
+class ClientPositionNettingProfile(str, Enum):
+    AverageRealTime = "AverageRealTime"
+    FifoEndOfDay = "FifoEndOfDay"
+    FifoRealTime = "FifoRealTime"
+
+
 class InfoPriceGroupSpec(str, Enum):
     # Commission fields are returned in results.
     Commissions = "Commissions"
