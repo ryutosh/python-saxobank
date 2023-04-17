@@ -35,6 +35,8 @@ class InfoPriceGroupSpec(str, Enum):
     InstrumentPriceDetails = "InstrumentPriceDetails"
     # Informational price fields are returned in results.
     PriceInfo = "PriceInfo"
+    # Detailed price fields are returned in results.
+    PriceInfoDetails = "PriceInfoDetails"
     # Quote data fields are returned in results.
     Quote = "Quote"
 

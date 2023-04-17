@@ -280,7 +280,8 @@ async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None
         infoprices_req = models.InfoPricesRequest(
             AssetType=orders_main.AssetType,
             Uic=orders_main.Uic,
-            FieldGroups=[models.InfoPriceGroupSpec.Quote],
+            # FieldGroups=[models.InfoPriceGroupSpec.Quote],
+            FieldGroups=[models.InfoPriceGroupSpec.PriceInfoDetails],
         ).dict(exclude_unset=True)
         log.debug(f"Infoprices request with message: {infoprices_req}")
 
@@ -290,18 +291,18 @@ async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None
         except exceptions.RequestError:
             raise exceptions.OrderError()
 
-        if infoprices_res.ErrorInfo or infoprices_res.Quote is None:
+        if infoprices_res.ErrorInfo or infoprices_res.PriceInfoDetails is None:
             raise exceptions.OrderError()
 
-        if infoprices_res.Quote.DelayedByMinutes:
-            log.info(f"Price info delayed: {infoprices_res.Quote}")
-            raise exceptions.OrderEnsurePriceNotGuaranteedError(
-                market_price="can not determine", p1=ensure_price_range[0], p2=ensure_price_range[1]
-            )
+        # if infoprices_res.Quote.DelayedByMinutes:
+        #     log.info(f"Price info delayed: {infoprices_res.Quote}")
+        #     raise exceptions.OrderEnsurePriceNotGuaranteedError(
+        #         market_price="can not determine", p1=ensure_price_range[0], p2=ensure_price_range[1]
+        #     )
 
-        market_price = infoprices_res.Quote.Mid
+        market_price = infoprices_res.PriceInfoDetails.LastTraded
         if not market_price or not (ensure_price_range[0] <= market_price <= ensure_price_range[1]):
-            log.info(f"Price not in ensured range: {infoprices_res.Quote}")
+            log.info(f"Price not in ensured range: {infoprices_res.PriceInfoDetails}")
             raise exceptions.OrderEnsurePriceNotGuaranteedError(
                 market_price=market_price, p1=ensure_price_range[0], p2=ensure_price_range[1]
             )

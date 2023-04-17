@@ -1,6 +1,7 @@
 # import asyncio
 # from functools import lru_cache
 from logging import getLogger
+from typing import Any, Dict
 
 from pydantic import ValidationError
 from winko import exceptions
@@ -57,7 +58,7 @@ async def instruments_details(winko_id, req: dict, path_conv, effectual_until=No
     return await request_template(request_coro, models.InstrumentsDetailsResponse)
 
 
-async def infoprices(winko_id, req: models.InfoPricesRequest, effectual_until=None):
+async def infoprices(winko_id, req: Dict[str, Any], effectual_until=None):
     # Send request
     request_coro = saxobank_request_dispatcher.request_endpoint(
         winko_id,

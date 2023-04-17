@@ -45,6 +45,14 @@ class PriceInfoResponse(SaxobankModel):
     Low: N[Decimal]
 
 
+class PriceInfoDetailsResponse(SaxobankModel):
+    Open: N[Decimal]
+    LastTraded: N[Decimal]
+    LastTradedSize: N[Decimal]
+    LastClose: N[Decimal]
+    Volume: N[Decimal]
+
+
 class QuoteResponse(SaxobankModel):
     Ask: N[Decimal]
     Bid: N[Decimal]
@@ -150,6 +158,7 @@ class InfoPricesResponse(SaxobankModel):
     Commissions: N[CommissionsResponse]
     DisplayAndFormat: N[DisplayAndFormatResponse]
     PriceInfo: N[PriceInfoResponse]
+    PriceInfoDetails: N[PriceInfoDetailsResponse]
     InstrumentPriceDetails: N[InstrumentPriceDetailsResponse]
     Quote: N[QuoteResponse]
 
