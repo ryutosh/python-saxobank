@@ -340,8 +340,8 @@ async def close(winko_id, position_id, external_reference: str = None):
 
     # --------------------------
     # Check netting mode
-    if clients_res.ClientPositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
-        raise exceptions.NotSupportedNettingModeError(profile=clients_res.ClientPositionNettingProfile)
+    if clients_res.PositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
+        raise exceptions.NotSupportedNettingModeError(profile=clients_res.PositionNettingProfile)
 
     # Make positions request
     path_conv = {"PositionId": position_id}
@@ -530,8 +530,8 @@ async def modify(winko_id, order_id, quantity=None, price=None, stop_limit=None,
 
     # --------------------------
     # Check netting mode
-    if clients_res.ClientPositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
-        raise exceptions.NotSupportedNettingModeError(profile=clients_res.ClientPositionNettingProfile)
+    if clients_res.PositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
+        raise exceptions.NotSupportedNettingModeError(profile=clients_res.PositionNettingProfile)
 
     # Make portfolio order request
     port_orders_req = models.PortOrdersReq().dict(exclude_unset=True)

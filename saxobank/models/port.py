@@ -6,7 +6,8 @@ from decimal import Decimal
 from typing import Optional as N
 
 from . import enums as e
-from .common import AccountKey, ClientKey, OrderDuration, SaxobankModel, SaxobankPagedRequestMoel, SaxobankPagedResponseMoel
+from .common import (AccountKey, ClientKey, OrderDuration, SaxobankModel,
+                     SaxobankPagedRequestMoel, SaxobankPagedResponseMoel)
 
 # ****************************************************************
 # SubModels
@@ -115,7 +116,7 @@ class PortClientsMeRes(SaxobankModel):
     DefaultAccountId: str
     DefaultAccountKey: AccountKey
     PositionNettingMode: e.ClientPositionNettingMode
-    ClientPositionNettingProfile: e.ClientPositionNettingProfile
+    PositionNettingProfile: e.ClientPositionNettingProfile
 
 
 class PositionsMeResponse(SaxobankModel):
