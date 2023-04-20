@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 # --
@@ -35,6 +36,7 @@ async def add_authinfo(request):
         # need_refresh=request.saxobank_auth_info.need_refresh,
     )
     # Elevate trade level
+    await asyncio.sleep(5)
     await full_trade_capability(request.winko_id)
 
     log.debug(f"def exit.")
