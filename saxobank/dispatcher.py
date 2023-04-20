@@ -389,7 +389,7 @@ class SaxobankRequestDispatcher:
         self.token_refresh_threhold = token_refresh_threhold
         self.users_sessions = {}
 
-    def _user_session(self, account_identifier):
+    def _user_session(self, account_identifier) -> SaxobankUserSession:
         if account_identifier not in self.users_sessions:
             self.users_sessions[account_identifier] = SaxobankUserSession(
                 self.app_mode,

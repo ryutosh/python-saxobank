@@ -6,8 +6,7 @@ from decimal import Decimal
 from typing import Optional as N
 
 from . import enums as e
-from .common import (AccountKey, ClientKey, OrderDuration, SaxobankModel,
-                     SaxobankPagedRequestMoel, SaxobankPagedResponseMoel)
+from .common import AccountKey, ClientKey, OrderDuration, SaxobankModel, SaxobankPagedRequestMoel, SaxobankPagedResponseMoel
 
 # ****************************************************************
 # SubModels

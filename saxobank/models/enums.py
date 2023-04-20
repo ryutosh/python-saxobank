@@ -6,6 +6,11 @@ class AssetType(str, Enum):
     CfdOnIndex = "CfdOnIndex"
 
 
+class AuthenticationLevel(str, Enum):
+    Authenticated = "Authenticated"
+    Elevated = "Elevated"
+
+
 class BuySell(str, Enum):
     Buy = "Buy"
     Sell = "Sell"
@@ -208,6 +213,11 @@ class PriceMode(str, Enum):
     ExtendedTradingHours = "ExtendedTradingHours"
     # Default price calculation mode. Price calculation is based on regular trading hours.
     RegularTradingHours = "RegularTradingHours"
+
+
+class TradeLevel(str, Enum):
+    FullTradingAndChat = "FullTradingAndChat"
+    OrdersOnly = "OrdersOnly"
 
 
 class TradingStatus(str, Enum):
