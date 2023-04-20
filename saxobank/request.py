@@ -137,3 +137,13 @@ async def positions_me(winko_id, req: dict, effectual_until=None, page=None):
         res.Data.extend(next_res.Data)
 
     return status, res
+
+
+async def root_sessions_capabilities(winko_id) -> models.SessionsCapabilitiesResponse:
+    request_coro = saxobank_request_dispatcher.request_endpoint(winko_id, endpoints.ROOT_SESSIONS_CAPABILITIES)
+    return await request_template(request_coro, models.SessionsCapabilitiesResponse)
+
+
+async def change_root_sessions_capabilities(winko_id, req: dict):
+    request_coro = saxobank_request_dispatcher.request_endpoint(winko_id, endpoints.ROOT_SESSIONS_CAPABILITIES_PATCH, data=req)
+    return await request_template(request_coro)
