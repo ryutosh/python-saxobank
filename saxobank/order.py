@@ -316,9 +316,18 @@ async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None
         try:
             status, infoprices_res = await saxo_req.infoprices(winko_id, infoprices_req, effectual_until)
         except exceptions.RequestError:
+            log.error("Request got error on infoprices")
             raise exceptions.OrderError()
 
-        if infoprices_res.ErrorInfo or infoprices_res.PriceInfoDetails is None:
+        if infoprices_res.ErrorInfo:
+            log.error(f"Infoprices request returned error: {infoprices_res.ErrorInfo}")
+            raise exceptions.OrderError()
+
+        elif infoprices_res.PriceInfoDetails is None:
+            log.error(f"Infoprices request not returned PriceInfoDetails. Response: {infoprices_res}")
+            status, capabilities_res = await saxo_req.root_sessions_capabilities(winko_id)
+
+            log.debug(f"Current TradeLevel: {capabilities_res.TradeLevel}")
             raise exceptions.OrderError()
 
         # if infoprices_res.Quote.DelayedByMinutes:
