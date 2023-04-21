@@ -290,6 +290,9 @@ async def full_trade_capability(winko_id):
 
 async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None, ensure_price_range=None) -> OrderResult:
 
+    # Upgrade session capability because it can be a slight delay before the capability iis in place.
+    await full_trade_capability(winko_id)
+
     # TODO!: Check if account has authorized
 
     is_ok, msg = await check_order(winko_id, orders_main, effectual_until)
