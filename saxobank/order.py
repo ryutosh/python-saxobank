@@ -264,6 +264,30 @@ async def check_order(
     return True, ""
 
 
+async def full_trade_capability(winko_id):
+    try:
+        status, capabilities_res = await saxo_req.root_sessions_capabilities(winko_id)
+    except exceptions.RequestError:
+        raise exceptions.OrderError()
+
+    if (curr_trade_level := capabilities_res.TradeLevel) is None:
+        log.error(f"TradeLevel can not determine.")
+        raise exceptions.OrderError()
+
+    log.debug(f"Current TradeLevel: {curr_trade_level}")
+    if curr_trade_level != models.TradeLevel.FullTradingAndChat:
+        change_capabilities_req = models.ChangeSessionsCapabilitiesRequest(
+            TradeLevel=models.TradeLevel.FullTradingAndChat,
+        ).dict(exclude_unset=True)
+
+        try:
+            status, _ = await saxo_req.change_root_sessions_capabilities(winko_id, change_capabilities_req)
+        except exceptions.RequestError:
+            raise exceptions.OrderError()
+
+        log.info(f"TradeLevel changed to FullTrading.")
+
+
 async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None, ensure_price_range=None) -> OrderResult:
 
     # TODO!: Check if account has authorized
@@ -275,6 +299,9 @@ async def order_entry(winko_id, orders_main, is_entry=True, effectual_until=None
     # --------------------------
     # Check prices current
     if ensure_price_range:
+
+        # Upgrade session capability for infoprice request
+        await full_trade_capability(winko_id)
 
         # Get instrument information
         infoprices_req = models.InfoPricesRequest(
@@ -333,7 +360,7 @@ async def close(winko_id, position_id, external_reference: str = None):
     """
     log.debug(f"Close positions: {position_id}")
 
-    # Send clients request
+    # Get client information
     try:
         status, clients_res = await saxo_req.clients_me(winko_id, effectual_until=None)
     except exceptions.RequestError:
@@ -344,7 +371,7 @@ async def close(winko_id, position_id, external_reference: str = None):
     if clients_res.PositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
         raise exceptions.NotSupportedNettingModeError(profile=clients_res.PositionNettingProfile)
 
-    # Make positions request
+    # Get order profile of position to close
     path_conv = {"PositionId": position_id}
     positions_req = models.PositionsReq(
         ClientKey=clients_res.ClientKey, FieldGroups=[models.PositionFieldGroup.PositionBase]
@@ -523,7 +550,7 @@ async def modify(winko_id, order_id, quantity=None, price=None, stop_limit=None,
     Now support CfdOnIndex only.
     """
 
-    # Send clients request
+    # Get client information
     try:
         status, clients_res = await saxo_req.clients_me(winko_id, effectual_until=None)
     except exceptions.RequestError:
@@ -534,7 +561,7 @@ async def modify(winko_id, order_id, quantity=None, price=None, stop_limit=None,
     if clients_res.PositionNettingProfile != models.ClientPositionNettingProfile.FifoEndOfDay:
         raise exceptions.NotSupportedNettingModeError(profile=clients_res.PositionNettingProfile)
 
-    # Make portfolio order request
+    # Get order information to modify
     port_orders_req = models.PortOrdersReq().dict(exclude_unset=True)
     path_conv = {"ClientKey": clients_res.ClientKey, "OrderId": order_id}
 
