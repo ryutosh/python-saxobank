@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional as N
+from typing import Optional, Any
 from urllib.parse import parse_qs
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -19,6 +19,14 @@ class SaxobankModel(BaseModel):
     pass
 
 
+# class CreateSubscriptionRequest(SaxobankModel):
+#     ContextId: str
+#     ReferenceId: str
+#     Format: str
+#     Arguments: Any
+#     ReplaceReferenceId: Optional[str]
+
+
 class SaxobankPagedRequestMoel(SaxobankModel):
     _Top: int = Field(None, alias="$top")
     _Skip: int = Field(None, alias="$skip")
@@ -26,7 +34,7 @@ class SaxobankPagedRequestMoel(SaxobankModel):
 
 class SaxobankPagedResponseMoel(SaxobankModel):
     # _Next: HttpUrl = Field(None, alias="__next")
-    _Next: N[HttpUrl] = None
+    _Next: Optional[HttpUrl] = None
 
     class Config:
         fields = {"_Next": "__next"}
@@ -43,8 +51,8 @@ class SaxobankPagedResponseMoel(SaxobankModel):
 
 class OrderDuration(SaxobankModel):
     DurationType: e.OrderDurationType
-    ExpirationDateContainsTime: N[bool]
-    ExpirationDateTime: N[datetime]
+    ExpirationDateContainsTime: Optional[bool]
+    ExpirationDateTime: Optional[datetime]
 
     class Config:
         use_enum_values = True

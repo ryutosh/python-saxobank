@@ -157,7 +157,7 @@ class SaxobankUserSession:
         self.token_refreshing = asyncio.Event()
         self.token_refreshing.set()
         self.token_refresh_task = None
-        self.token_accesses = StackedEvent()  # Requests using token
+        self.token_accesses = StackedEvent()  # Requests using  token
 
         # The session contains a cookie storage and connection pool,
         # thus cookies and connections are shared between HTTP requests sent by the same session.

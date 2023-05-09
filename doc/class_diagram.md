@@ -1,75 +1,236 @@
-# Request/Response
-## Access Limiting
-- Saxobankの仕様では、エンドポイントのサービスグループ別にリクエストがカウントされる旨が明記されている。
-    - しかし、どのエンドポイントリクエストに対して何がカウントされるのかは明記されていない。
-    - あるエンドポイントへのカウンタが、そのエンドポイント専用のものとは限らず、他のエンドポイントへのリクエストに対して共通してカウントされるかもしれない。
-        - 実際に、port/v1/positions/とport/v1/orders/は、どちらもPortfolioMinuteというディメンションで管理されるカウンタを消費する。
-    - エンドポイントへのリクエストURLとHTTP-Methodをキーに、レスポンスに格納されているディメンションをバリューとして、動的に辞書を作っても良いが、それだと仮に連続してアクセスする個別のエンドポイントが共通のカウンタで管理されていた場合に、初回はWait時間を無視してアクセスしてしまうことになる。
-    - プログラムの実行時に動的に辞書を組み立てるのではなく、予めどのエンドポイントに対してどのディメンションが返されるのかを確認し、そのAs-Isの動作を基に辞書を作っておくしかない。
-        - ディメンションの仕様が明記されていないので、不意に変わってしまうことが考えられる。それに備えて、想定したディメンションと異なっていた場合にシステムアラートを発行するのは有効である。
-        - ディメンション毎に規定されているLimit値が突然変わることは想定すべきである。Limit値は固定ではなく、サーバの負荷状態に応じて動的に調整されるかもしれない。
-- （セッション毎ではなく）アプリケーション毎のカウンタが存在する。しかし、このディメンション名も明記はされておらず、想定するしかない。
-- アクセス許容量やLimit値回復のための所要時間は、「１日あたり何回」「１分あたり何回」などと規定されている。しかし、１日の始まりがどのタイムゾーンの何時を指すのか、またカウントは０秒から５９秒までの間で増えていくのか、それともカウントがリセットされて初回のアクセスから起算して１分以内なのか、詳細な仕様は記されていない。また、当然ながらカウンタはサーバで処理した時間でカウントされる。クライアント側で現在のカウントや待ち時間を管理したところで、正しいのはサーバであり、クライアントは常に厳密ではない。
-    - Saxobankの仕様では、「リミットに達しそうな場合にはカウント情報を返却する」旨が明記されているので、この返却されるカウント情報のみでカウント管理する。
-    - 当たり前だが、カウント情報が必ずしも返却されないこと、カウント情報を伴わずに突然リクエスト過多エラーとされてしまう事態は想定すべきである。
-    - レスポンスは、リクエストした順番に返却されるとは限らない。また、こちらのリクエストした順番どおりにサーバに届くとも限らない。これはつまり、レスポンスに含まれるカウント情報の前後は全く信用できないことを意味する。後に来たレスポンスのカウント情報が最新とも、最後に送ったリクエストに対するレスポンスのカウント情報が最新とも限らない。正しくカウンタ管理する唯一の方法は、同一のディメンションに対するリクエストを並行させないことである。
-- 大抵の場合において、Limit値回復のための待ち時間は長くはない。システム停止に備えて前回のカウンタ情報や待ち時間を保持しておく必要性は薄く、これらの情報を永続化するためのコストは妥当ではない。
 
 ```mermaid
 classDiagram
 
-    注文 <|-- Saxo注文
-
-    class Saxo注文{
-        <<Statefull / Persistence>>
-      +str 注文番号
-      +内容チェック()
+    class ApplicationEnvironment{
+        - app_url
+        - environment_mode
+        - application_key
+        - application_secret
+        + auth_header()
+        + open_api_base_url()
     }
 
-    class Limit {
+    %% ==================== Session ==========================
+    class aiohttp_ClientResponse{
+        + status
+        + reason
+        + ok
+        + headers
+        + json()
+    }
+    class aiohttp_ClientWebSocketResponse{
+        + closed
+        + msg
+        + receive
+        + close()
+    }
+    aiohttp_ClientResponse <.. aiohttp_ClientSession
+    aiohttp_ClientWebSocketResponse <.. aiohttp_ClientSession
+    class aiohttp_ClientSession{
+        - cookies
+        - connections
+        + __init__(connector, headers)
+        + request(method, url, params, data, json, headers, auth)
+        + ws_connect(url)
+        + close()
+    }
+    class Token{
+        <<Entity>>
+        - access_token
+        - refresh_token
+        - redirect_uri
+        - code_verifier
+        - semaphoe refreshing
+        + get_token()
+    }
+    class RateLimit {
+        <<Entity>>
         - dimension
+        - remaining
+        - reset_after
+        + __init__(dimension, header_info)
+        + __eq__(dimension)
+    }
+    %%class TradeLevel {
+    %%    <<Enumeration>> 
+    %%}
+    %%TradeLevel <.. SessionCapability
+    %%class SessionCapability{
+    %%    trade_level
+    %%    NG: change_trade_level(trade_level)
+    %%}
+    %%class ContextId {
+    %%    <<ValueObject>>
+    %%    + __init__()
+    %%}
+    class Subscription{
+        <<Entity>>
+        + reference_id
+        - queue
+        + __init__(reference_id, queue)
+        + coroutine get()
+        + coroutine put()
 
     }
-
-    Limit <.. Throttle: use
-    %% Knows
-    %% - RateLimitヘッダの構文および残り時間の算出
-    %% NOT Knows
-    %% - リクエストとDimensionのマッピング
-    class Throttle {
-        <<Statefull / Ephemeral>>
-        - dimensions_limits[key, limit]
-        apply(dimension, response_headers) none
-        wait(dimension) none
+    %%ContextId <.. StreamingSession
+    Subscription <.. StreamingSession
+    aiohttp_ClientSession <.. StreamingSession
+    ServiceGroupRequesters <.. StreamingSession
+    class StreamingSession{
+        <<Entity>>
+        + context_id
+        - subscriptions: List<~Subscription~>
+        + __init__(aiohttp_client_session, service_group_requesters, ws_url)
+        + __eq__(StreamingSession)
+        + connect()
+        + subscribe()
+        + reauthorize()
     }
-
-    サービス認証 <.. Request: use
-    Throttle <.. Request: use
-
-    class Request{
-        <<Stateless>>
-        authenticator
-        app_throttle
-        sg_throttle
-        +new(authenticator, app_throttle, sg_throttle)
-        request_http(service)
-        request_service(service)
+    %%RateLimit <.. SessionRateLimits
+    %%class SessionRateLimits {
+    %%    <<CollectionObject>>
+    %%    - List<~rate_limit~>
+    %%    + apply(dimension, header_info)
+    %%    + throttle_time(dimension, time)
+    %%}
+    Token <.. ServiceGroupRequester: use
+    RateLimit <.. ServiceGroupRequester
+    aiohttp_ClientSession <.. ServiceGroupRequester
+    aiohttp_ClientResponse <.. ServiceGroupRequester
+    class ServiceGroupRequester{
+        <<Entity>>
+        + dimension
+        - session_rate_limit
+        - token
+        + __init__(dimension, aiohttp_client_session, rest_url, token)
+        + set_token(token)
+        +coroutine request_response(url, http_method, content_type, need_token_auth, is_order)
     }
-
-    Request <.. UserSession: use
+    ServiceGroupRequester <.. ServiceGroupRequesters
+    class ServiceGroupRequesters{
+        <<CollectionObject>>
+    }
+    class OAuthClientType{
+        <<Enumeration>>
+    }
+    ServiceGroupRequesters <.. UserSession
+    %%aiohttp_ClientSession <.. UserSession
+    %%aiohttp_ClientResponse <.. UserSession
+    aiohttp_ClientWebSocketResponse <.. UserSession
+    %%ContextId <.. UserSession
+    Token <.. UserSession: use
+    OAuthClientType <.. UserSession: use
+    StreamingSession <.. UserSession
+    RateLimit <.. UserSession: use
+    %%SessionRateLimits <.. UserSession: use
+    %%SessionCapability <.. UserSession: has
     class UserSession{
-        authenticator
-        + new(authenticator)
-        request_http(): result
+        <<Entity>>
+        - session_id
+        - token
+        - session_capability
+        - application_rate_limit
+        %%- session_rate_limits
+        - streaming_session
+        %%- context_association[context_id, streaming_session]
+        + __init__(session_id, aiohttp_client_session, auth_url, rest_url, ws_url, application_rate_limit)
+        -bool __eq__(self, UserSession)
+        +coroutine code_grant(oauth_client_type, app_key, app_secret, authorization_code, redirect_uri): bool
+        +coroutine refresh_token(oauth_client_type, app_key, app_secret): bool
+        +coroutine subscribe(url, args): Subscription
+        +coroutine request_response(dimension, url, http_method, content_type, need_token_auth, is_order)
+    }
+    UserSession <.. UserSessions
+    RateLimit <.. UserSessions
+    %% possible to have multiple sessions for a given user (by issuing multiple authorization tokens on the same user).
+    class UserSessions{
+        <<CollectionObject>>
+        - application_rate_limit
+        - List<~user_session~>
+        + __init__(environment_mode)
+        - create_session(session_id)
+        + SAME_AS_USER_SESSION(session_id, SAME_PARAMETERS)
+    }
+
+    %% ==================== Auth ==========================
+    OAuthClientType <.. AuthService
+    UserSessions <.. AuthService
+    class AuthService{
+        <<ApplicationService>> 
+        + __init__(self, application_environment)
+        + code_grant(session_id, oauth_client_type, authorization_code, redirect_uri, code_verifier, auto_refresh_token)
+        + run()
+    }
+
+    %% ==================== chart ==========================
+    class ChartPersistenceRegistory{
+        
+    }
+    OpenAPIRequest <.. ChartRegistory
+    UserSessions <.. ChartRegistory
+    ChartPersistenceRegistory <.. ChartRegistory
+    class ChartRegistory{
+
+    }
+    ChartRegistory <.. ChartService
+    class ChartService{
+        + __init__(self, chart_registory)
+        + get_price_info(asset, from, to)
+    }
+    UserSessions <.. PositionRegistory
+    class PositionRegistory{
+
+    }
+    UserSessions <.. OrdersRegistory
+    class OrdersRegistory{
+
+    }
+    ChartService <.. StrategyRuntime
+    class StrategyRuntime{
+
+    }
+    ChartService <.. PreFetchService
+    class PreFetchService{
+        start(session_id, asset)
+        stop(session_id, asset)
+        run()
+    }
+    class NotClass{
+        + OpenAPIRequest order_request_factory(amount: int)
+    }
+    class OpenAPIResponse{
+
+    }
+    class OpenAPIRequest{
+        - http_method
+        - content_type
+        + set_authorization_header(token: Token)
+
+    }
+    OpenAPIRequest <.. ExampleEndpoint
+    UserSessions <.. ExampleEndpoint
+    class ExampleEndpoint{
+        - dimension
+        - url
+        - need_token_auth
+        - is_order
+    }
+    NotClass <.. ExampleProgram
+    OpenAPIRequest <.. ExampleProgram
+    class ExampleProgram{
+
+    }
+    ExampleEndpoint <.. ExampleDomainService
+    class ExampleDomainService {
 
     }
 
-    %% Knows
-    %% - RateLimitヘッダの構文および残り時間の算出
-    %% NOT Knows
-    %% - リクエストとDimensionのマッピング
-    class サービス認証{
-        - Token
-        +refresh()
+    %% ==================== Winko ==========================
+    StrategyRuntime <.. winko__main__
+    ApplicationEnvironment <.. winko__main__
+    UserSessions <.. winko__main__
+    class winko__main__{
+        main()
     }
-``` 
+```
