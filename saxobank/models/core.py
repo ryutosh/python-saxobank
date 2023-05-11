@@ -2,7 +2,7 @@ from common import SaxobankModel
 from typing import Optional, Any
 
 
-class CreateSubscriptionRequest(SaxobankModel):
+class RequestCreateSubscription(SaxobankModel):
     #  additional querys https://www.developer.saxo/openapi/referencedocs/port/v1/orders/addactivesubscription/53353f1979518cb2b9598b88ca8410e1
     #  $inlinecount
     #  $skip
@@ -18,20 +18,20 @@ class CreateSubscriptionRequest(SaxobankModel):
     # RefreshRate: int
 
 
-class CreateSubscriptionResponse(SaxobankModel):
+class ResponseCreateSubscription(SaxobankModel):
     RefreshRate: int
     Snapshot: Any
 
 
-class RemoveSubscriptionRequest(SaxobankModel):
+class RequestRemoveSubscription(SaxobankModel):
     ContextId: str
     ReferenceId: str
 
 
-class WebSocketConnectRequest(SaxobankModel):
+class RequestWebSocketConnection(SaxobankModel):
     contextId: str
     messageid: Optional[int]
 
 
-class WebSocketReAuthorizationRequest(SaxobankModel):
+class RequestWebSocketReAuthorization(SaxobankModel):
     contextid: str

@@ -41,6 +41,9 @@ E = EndpointDefinition
 
 class Endpoint(EndpointDefinition, Enum):
     CHART_CHARTS = E("chart/v1/charts", M.GET, D.ChartMinute)
+    CHART_CHARTS_SUBSCRIPTIONS = E("chart/v1/charts/subscriptions", M.POST, None)
+    CHART_CHARTS_SUBSCRIPTIONS_DELETE = E("chart/v1/charts/subscriptions/{contextId}/{ReferenceId}", M.DELETE, None)
+    CHART_CHARTS_SUBSCRIPTIONS_DELETE_MULTIPLE = E("chart/v1/charts/subscriptions/{contextId}", M.DELETE, None)
     PORT_CLIENTS_ME = E("port/v1/clients/me", M.GET, D.PortfolioMinute)
     PORT_ORDERS = E("port/v1/orders/{ClientKey}/{OrderId}", M.GET, D.PortfolioMinute)
     PORT_POSITIONS = E("port/v1/positions/{PositionId}", M.GET, D.PortfolioMinute)
