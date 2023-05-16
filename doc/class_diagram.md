@@ -18,8 +18,10 @@ classDiagram
         - refresh_token
         - redirect_uri
         - code_verifier
+        - ListCallable observers
         - semaphoe refreshing
         + get_token()
+        + renew(str access_token)
     }
     class RateLimit {
         <<Entity>>
@@ -57,7 +59,8 @@ classDiagram
         + context_id
         + Token token
         - subscriptions: List<~Subscription~>
-        + __init__(aiohttp_client_session, ws_url)
+        + __init__(Token token, aiohttp_client_session, ws_url)
+        - _on_token_refresh()
         + connect()
         + re_authorize()
     }
@@ -98,12 +101,13 @@ classDiagram
         %%- session_rate_limits
         - StreamingSession streaming_session
         %%- context_association[context_id, streaming_session]
-        + __init__(aiohttp_client_session, auth_url, rest_url, ws_url, application_rate_limit)
-        + coroutine code_grant(oauth_client_type, app_key, app_secret, authorization_code, redirect_uri): bool
-        + coroutine refresh_token(oauth_client_type, app_key, app_secret): bool
-        + coroutine subscribe(url, args): Subscription
+        + __init__(Token token, RateLimitter rate_limitter, aiohttp_client_session, rest_url, ws_url)
+        %% + coroutine code_grant(oauth_client_type, app_key, app_secret, authorization_code, redirect_uri): bool
+        %% + coroutine refresh_token(oauth_client_type, app_key, app_secret): bool
+        + coroutine create_streaming(): StreamingSession
+        + coroutine subscribe(Subscription subscription, args): readable
         %% OpenAPI accesses
-        + coroutine place_new_orders(SaxobankModel request, datetime effectical_until): SaxobankModel
+        + coroutine place_new_orders(SaxobankModel request, datetime effectical_until, str access_token = None): SaxobankModel
     }
 
     UserSession <.. UserSessions
