@@ -14,8 +14,13 @@ class SessionCapability:
         pass
 
 
-class SessionCapabilityRepository:
-    def __init__(self):
-        pass
+def get_session_capability(session_id):
+    pass
 
-    def 
+
+def change_session_capability(session_id):
+    pass
+
+
+async def subscribe_session_capability(session_id, context_id):
+    pass

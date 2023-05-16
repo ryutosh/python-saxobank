@@ -45,12 +45,73 @@
         - ディメンションの仕様が明記されていないので、不意に変わってしまうことが考えられる。それに備えて、想定したディメンションと異なっていた場合にシステムアラートを発行するのは有効である。
         - ディメンション毎に規定されているLimit値が突然変わることは想定すべきである。Limit値は固定ではなく、サーバの負荷状態に応じて動的に調整されるかもしれない。
 - （セッション毎ではなく）アプリケーショングローバルのカウンタが存在する。しかし、このディメンション名も明記はされておらず、想定するしかない。
-- アクセス許容量やLimit値回復のための所要時間は、「１日あたり何回」「１分あたり何回」などと規定されている。しかし、１日の始まりがどのタイムゾーンの何時を指すのか、またカウントは０秒から５９秒までの間で増えていくのか、それともカウントがリセットされて初回のアクセスから起算して１分以内なのか、詳細な仕様は記されていない。また、当然ながらカウンタはサーバで処理した時間でカウントされる。クライアント側で現在のカウントや待ち時間を管理したところで、正しいのはサーバであり、クライアントは常に厳密ではない。
-    - Saxobankの仕様では、「リミットに達しそうな場合にはカウント情報を返却する」旨が明記されているので、この返却されるカウント情報のみでカウント管理する。
-    - 当たり前だが、カウント情報が必ずしも返却されないこと、カウント情報を伴わずに突然リクエスト過多エラーとされてしまう事態は想定すべきである。
-    - レスポンスは、リクエストした順番に返却されるとは限らない。また、こちらのリクエストした順番どおりにサーバに届くとも限らない。これはつまり、レスポンスに含まれるカウント情報の前後は全く信用できないことを意味する。後に来たレスポンスのカウント情報が最新とも、最後に送ったリクエストに対するレスポンスのカウント情報が最新とも限らない。正しくカウンタ管理する唯一の方法は、同一のディメンションに対するリクエストを並行させないことである。
-    - ★ただしこの考えだと、アプリケーショングローバルのカウンタを実装するのであれば、アプリケーション全体としてのリクエストもすべて並列化しなければならないという事であり、並行処理できなくなる。もう一度よく考えてみる必要がある。
+- Saxobankの仕様では、「リミットに達しそうな場合にはカウント情報を返却する」旨が明記されているので、この返却されるカウント情報のみでカウント管理する。
+- 当たり前だが、カウント情報が必ずしも返却されないこと、カウント情報を伴わずに突然リクエスト過多エラーとされてしまう事態は想定すべきである。
 - 大抵の場合において、Limit値回復のための待ち時間は長くはない。システム停止に備えて前回のカウンタ情報や待ち時間を保持しておく必要性は薄く、これらの情報を永続化するためのコストは妥当ではない。
+
+#### Case1
+- いつSaxoBank側のカウンタがリセットされるのか不明
+    - アクセス許容量やLimit値回復のための所要時間は、「１日あたり何回」「１分あたり何回」などと規定されている。しかし、１日の始まりがどのタイムゾーンの何時を指すのか、またカウントは０秒から５９秒までの間で増えていくのか、それともカウントがリセットされて初回のアクセスから起算して１分以内なのか、詳細な仕様は記されていない。
+    - 当然ながら、カウンタはサーバで処理した時間でカウントされる。クライアント側で現在のカウントや待ち時間を管理したところで、正しいのはサーバであり、クライアントは常に厳密ではない。
+```mermaid
+sequenceDiagram
+participant App
+participant Delay
+participant SaxoBank
+    App ->>+SaxoBank: Req1
+    Note left of App: Remaining:1
+    Note right of SaxoBank: Remaining:1
+    SaxoBank->>- Delay: Res1/Remaining:1
+    activate Delay
+    Note right of SaxoBank: Reset to 120
+
+    App ->>+ SaxoBank: Req2
+    Note left of App: Remaining:0
+    Delay ->>- App: Res1/Remaining:1
+    Note left of App: Remaining:1 ?
+    SaxoBank ->>- App: Res2/Remaining: 119
+    Note left of App: Remaining:119 ?
+
+```
+
+#### Case2
+- Saxobankからのレスポンスだからというだけでは、そのRemaining情報を適用できない
+- 順番は保証されていない
+```mermaid
+sequenceDiagram
+    App ->>+ Delay1: Req1
+    Note left of App: Remaining:2
+
+    App ->>+ Delay2: Req2
+    Note left of App: Remaining:1
+
+    App ->>+ SaxoBank: Req3
+    Note left of App: Remaining:0
+
+    Note right of SaxoBank: Remaining:2
+    SaxoBank ->>- App: Res3/Remaining2
+    Note left of App: Remaining:2 ?
+    Delay2 ->>+ SaxoBank: Req2
+    deactivate Delay2
+    Note right of SaxoBank: Remaining:1
+    SaxoBank ->>- Delay2: Res2/Remaining1
+    activate Delay2
+
+    Delay1 ->>+ SaxoBank: Req1
+    deactivate Delay1
+    Note right of SaxoBank: Remaining:0
+    SaxoBank ->>- App: Res1/Remaining0
+    Note left of App: Remaining:0 ?
+
+    Delay2 ->>- App: Res2/Remaining1
+    Note left of App: Remaining:1 ?
+
+```
+### 対処
+- Requestを送信した数に対しResponseのあった数を比較し、同一になった場合にのみ、そのRateLimit情報のみ適用する。
+- ResponseのDateヘッダを参照し、直近のResponseより古ければRateLimit情報は読み捨てる。
+    - Res2のRemaining:1は読み捨てられる
+
 
 # WeboSkect
 Use Cases are..

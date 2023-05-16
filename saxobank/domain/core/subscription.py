@@ -6,6 +6,7 @@ from saxobank import models
 import abc
 from typing import Optional, ClassVar
 from streaming_session import StreamingSession
+from user_session import UserSession
 
 
 class BaseSubscription(abc.ABC):
@@ -65,16 +66,16 @@ class ChartSubscription(BaseSubscription):
 
 
 class SubscriptionService:
-    def __init__(self, dispatcher: Dispatcher, context_id: str):
-        self.dispatcher = dispatcher
-        self.streaming_session = StreamingSession(context_id, self.dispatcher)
+    def __init__(self, user_session: UserSession):
+        self.user_session = user_session
+        self.streaming_session = None
 
     async def subscribe(self, subscription_cls: BaseSubscription, reference_id: str, arguments: Optional[dict] = None):
-        self.subscription = await subscription_cls(reference_id, self.streaming_session, self.dispatcher)
+        self.subscription = await subscription_cls(reference_id, self.streaming_session, self.user_session.dispatcher)
         self.subscription.create(arguments)
 
-    async def connect(self):
-        self.streaming_session.connect()
+    async def connect(self, context_id: str):
+        self.streaming_session = StreamingSession(context_id, self.user_session.dispatcher)
 
     async def reconnect(self, context_id: str, last_message_id: int):
         pass
