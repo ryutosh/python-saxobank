@@ -1,19 +1,22 @@
 import aiohttp
+import simplejson as json
 from api_call import Dispatcher
-from streaming_session import StreamingSession
+from authorization import Token
 from endpoint import Endpoint
+from environment import RestBaseUrl
+from streaming_session import StreamingSession
+
+
+class RateLimiter:
+    pass
 
 
 class UserSession:
-    def __init__(self, session_id, auth_url, rest_base_url, websocket_url, application_rate_limit):
-        self.tcp_connector = aiohttp.TCPConnector()
-        self.dispatcher = Dispatcher(self.tcp_connector, rest_base_url)
-        self.streaming_session = StreamingSession(self.tcp_connector, self.dispatcher, websocket_url)
+    def __init__(self, rest_base_url: RestBaseUrl, token: Token, rate_limiter: RateLimiter):
+        self.client_session = aiohttp.ClientSession(json_serialize=json.dumps)
+        # self.dispatcher = Dispatcher(self.tcp_connector, rest_base_url)
 
-    async def refresh_token():
-        self.streaming_session.reauth()
-
-    def create_streaming_session(self, context_id: str):
+    def create_streaming(self, context_id: str):
         self.streaming_session = StreamingSession(context_id, self.dispatcher)
         return self.streaming_session
 

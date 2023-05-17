@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
 from urllib.parse import parse_qs
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -12,6 +12,11 @@ class AccountKey(str):
 
 
 class ClientKey(str):
+    pass
+
+
+class ContextId(str):
+    "most 50 characters (a-z, A-Z, -, and 0-9)."
     pass
 
 

@@ -23,7 +23,7 @@ classDiagram
         + get_token()
         + renew(str access_token)
     }
-    class RateLimit {
+    class RateLimiter {
         <<Entity>>
         - dimension
         - remaining
@@ -58,13 +58,12 @@ classDiagram
         <<Entity>>
         + context_id
         + Token token
-        - subscriptions: List<~Subscription~>
-        + __init__(Token token, aiohttp_client_session, ws_url)
-        - _on_token_refresh()
+        + __init__(Token token, str context_id, str ws_base_url, TCPConnector connector)
+        - _on_token_refresh(str access_token)
         + connect(): Stream
         + reconnect(int message_id): Stream
         + disconnect()
-        + re_authorize()
+        + re_authorize(str access_token)
     }
     %%RateLimit <.. SessionRateLimits
     %%class SessionRateLimits {
@@ -90,7 +89,7 @@ classDiagram
     Token <.. UserSession: use
     OAuthClientType <.. UserSession: use
     StreamingSession <.. UserSession
-    RateLimit <.. UserSession: use
+    RateLimiter <.. UserSession: use
     EndPoint <.. UserSession
     SaxobankModel <.. UserSession
     %%SessionRateLimits <.. UserSession: use
@@ -98,30 +97,18 @@ classDiagram
     class UserSession{
         <<Entity>>
         - Token token
-        - RateLimitter limitter
+        - RateLimiter limiter
         %% - RateLimit application_rate_limit
         %%- session_rate_limits
         - StreamingSession streaming_session
         %%- context_association[context_id, streaming_session]
-        + __init__(Token token, RateLimitter rate_limitter, aiohttp_client_session, rest_url, ws_url)
+        + __init__(Token token, RateLimiter rate_limiter, str rest_url)
         %% + coroutine code_grant(oauth_client_type, app_key, app_secret, authorization_code, redirect_uri): bool
         %% + coroutine refresh_token(oauth_client_type, app_key, app_secret): bool
-        + coroutine create_streaming(): StreamingSession
+        + coroutine create_streaming(str context_id, str ws_base_url): StreamingSession
         + coroutine subscribe(Subscription subscription, args): readable
         %% OpenAPI accesses
         + coroutine place_new_orders(SaxobankModel request, datetime effectical_until, str access_token = None): SaxobankModel
-    }
-
-    UserSession <.. UserSessions
-    RateLimit <.. UserSessions
-    %% possible to have multiple sessions for a given user (by issuing multiple authorization tokens on the same user).
-    class UserSessions{
-        <<CollectionObject>>
-        - application_rate_limit
-        - List<~user_session~>
-        + __init__(environment_mode)
-        - create_session(session_id)
-        + SAME_AS_USER_SESSION(session_id, SAME_PARAMETERS)
     }
 
     %% ==================== Auth ==========================
