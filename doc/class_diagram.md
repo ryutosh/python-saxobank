@@ -61,7 +61,9 @@ classDiagram
         - subscriptions: List<~Subscription~>
         + __init__(Token token, aiohttp_client_session, ws_url)
         - _on_token_refresh()
-        + connect()
+        + connect(): Stream
+        + reconnect(int message_id): Stream
+        + disconnect()
         + re_authorize()
     }
     %%RateLimit <.. SessionRateLimits
