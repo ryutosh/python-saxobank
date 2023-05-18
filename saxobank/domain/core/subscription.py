@@ -1,26 +1,28 @@
+from __future__ import annotations
+
+import abc
+
 from api_call import Dispatcher
 from endpoint import Endpoint
-
-# from abc import ABC
-from saxobank import models
-import abc
-from typing import Optional, ClassVar
 from streaming_session import StreamingSession
 from user_session import UserSession
 
+# from abc import ABC
+from saxobank import models
+
 
 class BaseSubscription(abc.ABC):
-    FORMAT_JSON: ClassVar[str] = "application/json"
-    endpoint_create: ClassVar[Endpoint]
-    endpoint_remove: ClassVar[Endpoint]
-    endpoint_remove_multiple: ClassVar[Endpoint]
+    FORMAT_JSON: str = "application/json"
+    endpoint_create: Endpoint
+    endpoint_remove: Endpoint
+    endpoint_remove_multiple: Endpoint
 
     def __init__(self, reference_id: str, streaming_session: StreamingSession, dispatcher: Dispatcher) -> None:
         self.reference_id = reference_id
         self.streaming_session = streaming_session
         self.dispatcher = dispatcher
 
-    async def create(self, arguments: Optional[dict] = None):
+    async def create(self, arguments: dict | None = None):
         # has argument necessary case :  https://www.developer.saxo/openapi/referencedocs/trade/v1/infoprices/addsubscriptionasync/b0ffda941b3291f3dd9319673cc88403
         #                                https://www.developer.saxo/openapi/referencedocs/trade/v1/optionschain/addsubscriptionasync/8ff796d4153fb5ae1dbce9ebf2d48b82
         #                                https://www.developer.saxo/openapi/referencedocs/trade/v1/prices/addsubscriptionasync/e1dbfa7d3e2ef801a7c4ade9e57f8812
@@ -54,8 +56,8 @@ class BaseSubscription(abc.ABC):
 
 
 class ChartSubscription(BaseSubscription):
-    endpoint_create: ClassVar[Endpoint] = Endpoint.CHART_CHARTS_SUBSCRIPTIONS
-    endpoint_remove: ClassVar[Endpoint] = Endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE
+    endpoint_create: Endpoint = Endpoint.CHART_CHARTS_SUBSCRIPTIONS
+    endpoint_remove: Endpoint = Endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE
 
 
 # class Subscriptions:

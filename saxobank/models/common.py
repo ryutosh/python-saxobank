@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import string
 from datetime import datetime
-from typing import Any, Optional, Union
 from urllib.parse import parse_qs
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -21,7 +22,7 @@ class ContextId:
     MIN_ID_LENGTH: int = 1
     ACCEPTABLE_CHARS: str = string.ascii_letters + string.digits + "-"
 
-    def __init__(self, id: Union[int, str]):
+    def __init__(self, id: int | str):
         assert self.validate(id)
         self.__id = str(id)
 
@@ -29,7 +30,7 @@ class ContextId:
         return repr(self.__id)
 
     @classmethod
-    def validate(cls, id: Union[int, str]) -> bool:
+    def validate(cls, id: int | str) -> bool:
         chars = str(id)
         return (chars == "".join([c for c in chars if c in cls.ACCEPTABLE_CHARS])) and (
             cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH

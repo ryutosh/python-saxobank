@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional
 
 import aiohttp
 import simplejson as json
@@ -31,7 +32,7 @@ class UserSession:
         return self.streaming_session
 
     async def place_new_orders(
-        self, request_model: OrdersRequest, effectual_until: Optional[datetime] = None, access_token: Optional[str] = None
+        self, request_model: OrdersRequest, effectual_until: datetime | None = None, access_token: str | None = None
     ) -> OrdersResponse:
         access_token = access_token if access_token else await self.token.get_token()
 
