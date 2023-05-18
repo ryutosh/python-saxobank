@@ -1,5 +1,6 @@
+import string
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from urllib.parse import parse_qs
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -15,9 +16,24 @@ class ClientKey(str):
     pass
 
 
-class ContextId(str):
-    "most 50 characters (a-z, A-Z, -, and 0-9)."
-    pass
+class ContextId:
+    MAX_ID_LENGTH: int = 50
+    MIN_ID_LENGTH: int = 1
+    ACCEPTABLE_CHARS: str = string.ascii_letters + string.digits + "-"
+
+    def __init__(self, id: Union[int, str]):
+        assert self.validate(id)
+        self.__id = str(id)
+
+    def __repr__(self):
+        return repr(self.__id)
+
+    @classmethod
+    def validate(cls, id: Union[int, str]) -> bool:
+        chars = str(id)
+        return (chars == "".join([c for c in chars if c in cls.ACCEPTABLE_CHARS])) and (
+            cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH
+        )
 
 
 class SaxobankModel(BaseModel):

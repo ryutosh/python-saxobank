@@ -1,11 +1,16 @@
-import aiohttp
-from api_call import Dispatcher
-from endpoint import Endpoint
+import abc
 
 # from abc import ABC
 import uuid
+
+import aiohttp
+from api_call import Dispatcher
+from endpoint import Endpoint
+from environment import WsBaseUrl
+
+from saxobank.models.common import ContextId
+
 from ..saxobank import models
-import abc
 
 # from subscription import BaseSubscription
 
@@ -85,9 +90,10 @@ class DataMessage:
 class StreamingSession:
     WS_CONNECT_URL: str = "connect"
 
-    def __init__(self, context_id: str, dispatcher: Dispatcher) -> None:
+    def __init__(self, context_id: ContextId, ws_base_url: WsBaseUrl, connector: aiohttp.TCPConnector) -> None:
         self.context_id = context_id
-        self.dispatcher = dispatcher
+        self.ws_base_url = ws_base_url
+        self.client_session = aiohttp.ClientSession(base_url=ws_base_url, connector=connector)
 
     def _create_websocket_connect_request(self) -> dict:
         return models.RequestCreateWebSocketConnection(ContextId=self.context_id).dict()

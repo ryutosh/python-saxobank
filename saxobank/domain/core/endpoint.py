@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 from dataclasses import dataclass
 
 
@@ -12,7 +12,7 @@ class Dimension(str, Enum):
     TradeOrdersPatchSecond = "TradeOrdersPatchSecond"
 
 
-class HttpMethod(str, Enum):
+class HttpMethod(Enum):
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -21,8 +21,8 @@ class HttpMethod(str, Enum):
 
 
 class ContentType(Enum):
-    TEXT = 1
-    JSON = 2
+    TEXT = auto()
+    JSON = auto()
 
 
 @dataclass
