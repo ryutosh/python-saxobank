@@ -68,7 +68,13 @@ class PositionsPositionIdReq(SaxobankModel):
     PositionId: str
     FieldGroups: list[e.PositionFieldGroup] | None
 
+    def url_param(self) -> dict[str, str]:
+        return self.dict(include={'PositionId'})
+
     class Config:
+        fields = {
+            'PositionId': 'exclude'
+        }
         use_enum_values = True
 
 

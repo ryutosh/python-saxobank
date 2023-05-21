@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import lru_cache
 
 
 class Dimension(str, Enum):
@@ -27,10 +28,13 @@ class ContentType(Enum):
 
 @dataclass
 class EndpointDefinition:
-    url: str
+    path: str
     method: HttpMethod
     dimension: Dimension
     content_type: ContentType = ContentType.JSON
+
+    def path(self, path_conv: dict[str, str]) -> str:
+        return self.path.format(path_conv)
 
 
 # Shortcuts
