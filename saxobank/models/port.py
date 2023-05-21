@@ -62,6 +62,16 @@ class PositionsReq(SaxobankModel):
         use_enum_values = True
 
 
+class PositionsPositionIdReq(SaxobankModel):
+    ClientKey: ClientKey
+    AccountKey: AccountKey | None
+    PositionId: str
+    FieldGroups: list[e.PositionFieldGroup] | None
+
+    class Config:
+        use_enum_values = True
+
+
 class PositionsMeRequest(SaxobankPagedRequestMoel):
     FieldGroups: N[list[e.PositionFieldGroup]]
     PriceMode: N[e.PriceMode]

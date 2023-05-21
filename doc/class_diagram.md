@@ -58,7 +58,7 @@ classDiagram
         <<Entity>>
         + context_id
         + Token token
-        + __init__(Token token, str context_id, str ws_base_url, TCPConnector connector)
+        + __init__(WebSocketClient ws_client, Token token, str context_id, str ws_base_url)
         - _on_token_refresh(str access_token)
         + connect(): Stream
         + reconnect(int message_id): Stream
@@ -102,10 +102,10 @@ classDiagram
         %%- session_rate_limits
         - StreamingSession streaming_session
         %%- context_association[context_id, streaming_session]
-        + __init__(Token token, RateLimiter rate_limiter, str rest_url)
+        + __init__(HttpClient http_client, Token token, RateLimiter rate_limiter, str rest_url)
         %% + coroutine code_grant(oauth_client_type, app_key, app_secret, authorization_code, redirect_uri): bool
         %% + coroutine refresh_token(oauth_client_type, app_key, app_secret): bool
-        + coroutine create_streaming(str context_id, str ws_base_url): StreamingSession
+        %% + coroutine create_streaming(str context_id, str ws_base_url): StreamingSession
         + coroutine subscribe(Subscription subscription, args): readable
         %% OpenAPI accesses
         + coroutine place_new_orders(SaxobankModel request, datetime effectical_until, str access_token = None): SaxobankModel

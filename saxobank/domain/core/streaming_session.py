@@ -90,10 +90,9 @@ class DataMessage:
 class StreamingSession:
     WS_CONNECT_URL: str = "connect"
 
-    def __init__(self, context_id: ContextId, ws_base_url: WsBaseUrl, connector: aiohttp.TCPConnector) -> None:
+    def __init__(self, ws_client: aiohttp.ClientSession, context_id: ContextId) -> None:
+        self.ws_client = ws_client
         self.context_id = context_id
-        self.ws_base_url = ws_base_url
-        self.client_session = aiohttp.ClientSession(base_url=ws_base_url, connector=connector)
 
     def _create_websocket_connect_request(self) -> dict:
         return models.RequestCreateWebSocketConnection(ContextId=self.context_id).dict()

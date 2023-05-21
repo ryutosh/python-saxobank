@@ -26,3 +26,5 @@ saxobank_request_dispatcher = dispatcher.SaxobankRequestDispatcher(
     request_timeout_connect=S.get("REQUEST_TIMEOUT_CONNECT"),
     token_refresh_threhold=0.8,
 )
+
+

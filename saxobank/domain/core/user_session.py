@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 from datetime import datetime
+from functools import lru_cache
+from urllib.parse import urljoin
 
 import aiohttp
+import portfolio
 import simplejson as json
 from api_call import Dispatcher
-from authorization import Token
-from endpoint import Endpoint, EndpointDefinition
+from authorization import OAuth2Authorization
+from endpoint import Endpoint, EndpointDefinition, HttpMethod
 from environment import RestBaseUrl, WsBaseUrl
 from streaming_session import StreamingSession
 
 from saxobank.models import OrdersRequest, OrdersResponse, SaxobankModel
 from saxobank.models.common import ContextId
+
+log = getLogger(__name__)
 
 
 class RateLimiter:
@@ -19,24 +24,91 @@ class RateLimiter:
 
 
 class UserSession:
-    def __init__(self, rest_base_url: RestBaseUrl, token: Token, rate_limiter: RateLimiter):
-        self.client_session = aiohttp.ClientSession(base_url=rest_base_url, json_serialize=json.dumps)
-        self.token = token
-        self.rate_limiter = rate_limiter
+    def __init__(
+        self,
+        rest_base_url: RestBaseUrl,
+        http_client: aiohttp.ClientSession,
+        rate_limiter: RateLimiter,
+        access_token: str | None = None,
+    ):
+        self.base_url = rest_base_url
+        self.http = http_client
+        self.limiter = rate_limiter
+        self.token = access_token
 
-    async def _boiler(self, endpoint: EndpointDefinition, request_model: SaxobankModel):
-        pass
+        # namespace includes
+        self.port = portfolio
 
-    def create_streaming(self, context_id: ContextId, ws_base_url: WsBaseUrl):
-        self.streaming_session = StreamingSession(context_id, ws_base_url, self.client_session.connector)
-        return self.streaming_session
+    async def _auth_header(self, access_token: str | None = None):
+        return {"Authorization": f"Bearer {access_token if access_token else self.token}"}
+
+    async def _boiler(self, task: Callable, ep: EndpointDefinition, effectual_until: datetime | None = None):
+        await self.rate_limiter.throttle(ep.dimension, ep.is_order, effectual_until)
+
+        try:
+            log.debug(f"HTTP: Requesting to URL: {ep.url}")
+            response = await task
+
+        except aiohttp.ClientResponseError as ex:
+            log.error(f"HTTP: Request failed with ClientError: {ex}")
+            raise exceptions.ResponseError(ex.request_info, ex.status, ex.headers)
+
+        except aiohttp.ClientError as ex:
+            log.error(f"HTTP: Request failed with ClientError: {ex}")
+            raise exceptions.RequestError()
+
+        else:
+            async with response:
+                status = response.status
+                headers = response.headers
+                body = await response.json() if response.content_type == CONTENT_TYPE_JSON else None
+                request_info = response.request_info
+
+            log.debug(f"HTTP: Response returned with status:{status}.")
+
+        if 401 <= status:
+            log.error(f"HTTP: Req info: {request_info}")
+            log.error(f"HTTP: Res body: {body}")
+            raise exceptions.ResponseError(request_info, status, headers)
+
+        return status, headers, body
+
+    @lru_cache
+    def _full_url(self, url: str) -> str:
+        return urljoin(self.base_url, url)
 
     async def place_new_orders(
         self, request_model: OrdersRequest, effectual_until: datetime | None = None, access_token: str | None = None
     ) -> OrdersResponse:
-        access_token = access_token if access_token else await self.token.get_token()
+        task = self.http.post(
+            self._full_url(Endpoint.TRADE_ORDERS.url),
+            json=request_model.dict(exclude_unset=True),
+            headers=self._auth_header(access_token),
+        )
 
-        await self.rate_limiter(Endpoint.TRADE_ORDERS.dimension, Throttle(endpoint.is_order)).throttle(effectual_until)
+        await self._boiler(task, Endpoint.TRADE_ORDERS, effectual_until)
 
-    # async def create_subscription(self, subscription_id: int, endpoint: Endpoint, args):
-    #     return await self.streaming_session.create_subscription(subscription_id, endpoint, args)
+    async def port_orders(
+        self, request_model: PortOrdersRequest, effectual_until: datetime | None = None, access_token: str | None = None
+    ) -> OrdersResponse:
+        # Send request
+        log.debug(f"Request: {req}, Page: {page}")
+        if page:
+            req["_Top"] = page[0]
+            req["_Skip"] = page[1]
+
+        request_coro = saxobank_request_dispatcher.request_endpoint(
+            winko_id,
+            endpoints.PORT_ORDERS,
+            data=req,
+            path_conv=path_conv,
+            effectual_until=effectual_until,
+        )
+        status, res = await request_template(request_coro, models.PortOrdersResPaged)
+        next_page = res.next_page()
+
+        if next_page:
+            status, next_res = await port_orders(winko_id, req, path_conv, effectual_until, next_page)
+            res.Data.extend(next_res.Data)
+
+        return status, res
