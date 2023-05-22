@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import string
 from datetime import datetime
+from enum import Enum
+from typing import Any, Optional
 from urllib.parse import parse_qs
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -9,12 +11,20 @@ from pydantic import BaseModel, Field, HttpUrl
 from . import enums as e
 
 
-class AccountKey(str):
-    pass
+class AccountKey:
+    def __init__(self, value: str):
+        self.__value = str(value)
+
+    def __repr__(self):
+        return repr(self.__value)
 
 
-class ClientKey(str):
-    pass
+class ClientKey:
+    def __init__(self, value: str):
+        self.__value = str(value)
+
+    def __repr__(self):
+        return repr(self.__value)
 
 
 class ContextId:
@@ -38,7 +48,26 @@ class ContextId:
 
 
 class SaxobankModel(BaseModel):
-    pass
+    def path_items(self) -> dict[str, Any]:
+        return {}
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class InlineCountValue(Enum):
+    """
+    Defines an enumeration for $inlinecount query option values.
+    """
+
+    ALL_PAGES = "AllPages"  # The results will contain a total count of items in the queried dataset.
+    NONE = "None"  # The results will not contain an inline count.
+
+
+class ODataModel(BaseModel):
+    inlinecount: InlineCountValue
+    top: Optional[int] = Field(alias="$top")
+    skip: Optional[int] = Field(alias="$skip")
 
 
 # class CreateSubscriptionRequest(SaxobankModel):
@@ -50,22 +79,22 @@ class SaxobankModel(BaseModel):
 
 
 class SaxobankPagedRequestMoel(SaxobankModel):
-    _Top: int = Field(None, alias="$top")
-    _Skip: int = Field(None, alias="$skip")
+    top: int = Field(None, alias="$top")
+    skip: int = Field(None, alias="$skip")
 
 
 class SaxobankPagedResponseMoel(SaxobankModel):
-    # _Next: HttpUrl = Field(None, alias="__next")
-    _Next: Optional[HttpUrl] = None
+    next: HttpUrl = Field(None, alias="__next")
+    # next: HttpUrl | None = None
 
-    class Config:
-        fields = {"_Next": "__next"}
+    # class Config:
+    #     fields = {"_Next": "__next"}
 
     def next_page(self):
-        if not self._Next:
+        if not self.next:
             return None
 
-        query = parse_qs(self._Next.query)
+        query = parse_qs(self.next.query)
         top = query.get("top", [None])[0]
         skip = query.get("skip", [None])[0]
         return (top, skip) if top and skip else None

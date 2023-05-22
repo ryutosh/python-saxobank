@@ -42,12 +42,12 @@ class UserSession:
     async def _auth_header(self, access_token: str | None = None):
         return {"Authorization": f"Bearer {access_token if access_token else self.token}"}
 
-    async def _boiler(self, task: Callable, ep: EndpointDefinition, effectual_until: datetime | None = None):
+    async def _boiler(self, request_task: Callable, ep: EndpointDefinition, effectual_until: datetime | None = None):
         await self.rate_limiter.throttle(ep.dimension, ep.is_order, effectual_until)
 
         try:
             log.debug(f"HTTP: Requesting to URL: {ep.url}")
-            response = await task
+            response = await request_task
 
         except aiohttp.ClientResponseError as ex:
             log.error(f"HTTP: Request failed with ClientError: {ex}")
@@ -72,43 +72,3 @@ class UserSession:
             raise exceptions.ResponseError(request_info, status, headers)
 
         return status, headers, body
-
-    @lru_cache
-    def _full_url(self, url: str) -> str:
-        return urljoin(self.base_url, url)
-
-    async def place_new_orders(
-        self, request_model: OrdersRequest, effectual_until: datetime | None = None, access_token: str | None = None
-    ) -> OrdersResponse:
-        task = self.http.post(
-            self._full_url(Endpoint.TRADE_ORDERS.url),
-            json=request_model.dict(exclude_unset=True),
-            headers=self._auth_header(access_token),
-        )
-
-        await self._boiler(task, Endpoint.TRADE_ORDERS, effectual_until)
-
-    async def port_orders(
-        self, request_model: PortOrdersRequest, effectual_until: datetime | None = None, access_token: str | None = None
-    ) -> OrdersResponse:
-        # Send request
-        log.debug(f"Request: {req}, Page: {page}")
-        if page:
-            req["_Top"] = page[0]
-            req["_Skip"] = page[1]
-
-        request_coro = saxobank_request_dispatcher.request_endpoint(
-            winko_id,
-            endpoints.PORT_ORDERS,
-            data=req,
-            path_conv=path_conv,
-            effectual_until=effectual_until,
-        )
-        status, res = await request_template(request_coro, models.PortOrdersResPaged)
-        next_page = res.next_page()
-
-        if next_page:
-            status, next_res = await port_orders(winko_id, req, path_conv, effectual_until, next_page)
-            res.Data.extend(next_res.Data)
-
-        return status, res

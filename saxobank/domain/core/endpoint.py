@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum, auto
-from functools import lru_cache
-
+from urllib.parse import urljoin
+from typing import Any
 
 class Dimension(str, Enum):
     ChartMinute = "ChartMinute"
@@ -33,8 +35,9 @@ class EndpointDefinition:
     dimension: Dimension
     content_type: ContentType = ContentType.JSON
 
-    def path(self, path_conv: dict[str, str]) -> str:
-        return self.path.format(path_conv)
+    def url(self, base_url: str, path_converts: dict[str, Any] | None = None) -> str:
+        converted_path = self.path.format(**path_converts) if path_converts else self.path
+        return urljoin(base_url, self.path.format(converted_path))
 
 
 # Shortcuts

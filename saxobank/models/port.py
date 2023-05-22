@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from decimal import Decimal
 from typing import Optional as N
+from urllib.parse import quote
 
 from . import enums as e
 from .common import AccountKey, ClientKey, OrderDuration, SaxobankModel, SaxobankPagedRequestMoel, SaxobankPagedResponseMoel
@@ -64,17 +65,15 @@ class PositionsReq(SaxobankModel):
 
 class PositionsPositionIdReq(SaxobankModel):
     ClientKey: ClientKey
-    AccountKey: AccountKey | None
     PositionId: str
-    FieldGroups: list[e.PositionFieldGroup] | None
+    # AccountKey: N[AccountKey]
+    # FieldGroups: N[list[e.PositionFieldGroup]]
 
-    def url_param(self) -> dict[str, str]:
-        return self.dict(include={'PositionId'})
+    def path_items(self) -> dict[str, str]:
+        return {"PositionId": self.PositionId}
 
     class Config:
-        fields = {
-            'PositionId': 'exclude'
-        }
+        fields = {"PositionId": {"exclude": True}}
         use_enum_values = True
 
 
