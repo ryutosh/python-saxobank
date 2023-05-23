@@ -26,7 +26,7 @@ environment = {
 # When you control authorization yourself
 ```python
 # Create application
-saxo = saxobank.Application(environment, sqlib='abc.dat')
+saxo = saxobank.Application(environment, sqlite='abc.dat')
 
 # User Sesion
 session = saxo.create_session(trade_level=models.TradeLevel.OrdersOnly)
@@ -36,17 +36,17 @@ req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountTy
 res_orders = await session.trade.place_new_order(req_orders, access_token='xxxx')
 
 # Subscribe
-streaming = session.create_streaming()
+streaming = session.create_streaming(access_token='xxxx')
 req_chart = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99)
-async with streaming.trade.create_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1") as chart_subscription:  # New reference if omitted.
+async with streaming.trade.chart_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1") as chart_subscription:
     pass
 
-# Cancel multiple subscriptions
-streaming.trade.remove_subscriptions(tag="strategy1")
+# Tell new access token if changed
+await streaming.re_auth(access_token='yyyy')
 
-# req_subscriptions = models.root.SubscriptionsReq(ContextId='con1', Tag='strategy1')
-# res_subscriptions = await session.root.subscriptions(req_subscriptions, access_token='xxxx')
-# res_subscriptions = await session.root.subscriptions(tag="strategy1", access_token='xxxx')
+# Cancel multiple subscriptions
+await streaming.trade.remove_subscriptions(tag="strategy1")
+
 
 
 # Utils
