@@ -36,6 +36,9 @@
 
 ## Request/Response
 ### Access Limiting
+RFCを参考にしていると思われるので参考に
+https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers
+
 - Saxobankの仕様では、エンドポイントのサービスグループ別にリクエストがカウントされる旨が明記されている。
     - しかし、どのエンドポイントリクエストに対して何がカウントされるのかは明記されていない。
     - あるエンドポイントへのカウンタが、そのエンドポイント専用のものとは限らず、他のエンドポイントへのリクエストに対して共通してカウントされるかもしれない。

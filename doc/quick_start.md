@@ -32,13 +32,18 @@ saxo = saxobank.Application(environment)
 session = saxo.create_session(sqlib='abc.dat')
 
 # Send request
-req_orders = req.Orders(Amount=10.0, AmountType=OrderAmountType.CurrencyAmount)
-res_orders = await session.place_new_order(req_orders, access_token='xxxx')
+req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=OrderAmountType.CurrencyAmount)
+res_orders = await session.trade.place_new_order(req_orders, access_token='xxxx')
 
 # Subscribe
 req_chart = ChartSubscriptionRequest(AssetType=AssetType.FxSwap, Uic=99)
 async with session.subscribe(ChartSubscription(arguments=req_chart)) as chart_subscription:
     pass
+
+# Cancel multiple subscriptions
+req_subscriptions = models.root.SubscriptionsReq(ContextId='con1', Tag='strategy1')
+res_subscriptions = await session.root.subscriptions(req_subscriptions, access_token='xxxx')
+
 
 # Utils
 # Task whatch your session capability and stay FullTrade 
