@@ -107,18 +107,60 @@ class StreamingSession:
     #         self.subscriptions.append(subscription)
     #         return subscription
 
-    async def connect(self):
+    async def connect(self, access_token: str) -> ContextManager:
         params = self._create_websocket_connect_request()
-        async with self.dispatcher.request_ws(self.WS_CONNECT_URL, params=params) as response:
-            while True:
-                data_message = DataMessage(await response.read())
-                if data_message.is_control():
-                    if instanceof(data_message, ResetSubscriptionMessage):
-                        pass
+        return await self.ws_client.ws_connect(self.WS_CONNECT_URL)
 
-                else:
-                    subscriptions.put(data_message)
-                    self.last_message_id = data_message.message_id
+    async def disconnect(self):
+        pass
+
+    async def reauthorize(self, access_token: str):
+        pass
+
+    async def reconnect(self, access_token: str | None = None, last_message_id: int | None = None):
+        pass
 
     # async def remove_subscription(self, subscription_class: BaseSubscription, reference_id: str):
     #     pass
+
+
+class ContextManager:
+    def __init__(self, context_manager: ContextManager) -> None:
+        self.ctxt = context_manager
+        self.subscripions = []
+
+    async def chart_subscription(self, arguments) -> Subscription:
+        subscription = Subscription(self, entry_url, exit_url, arguments)
+        self.subscriptions.append(subscription)
+        if not run:
+            loop.run(self.run())
+        return subscription
+
+    def run(self):
+        while True:
+            data_message = DataMessage(await response.read())
+            if data_message.is_control():
+                if instanceof(data_message, ResetSubscriptionMessage):
+                    self.subscripions(data_message.old_ref_id).reset_subscription(new_ref_id)
+
+            else:
+                subscriptions.put(data_message)
+                self.last_message_id = data_message.message_id
+
+
+class Subscription:
+    def __init__(self, queue: Queue, http_client: aiohttp.ClientSession, context_id: str, reference_id: str):
+        self.queue = queue
+        self.ctxt_id = context_id
+        self.ref_id = reference_id
+
+    async def reset_subscription(self, reference_id):
+        self.http_client.request(self.entry_url, self.referece_id, reference_id)
+        self.reference_id = reference_id
+
+    async def __enter__(self):
+        self.http_client.request(self.entry_url)
+        yield await self.queue.pop()
+
+    async def __exit__(self):
+        self.http_client.request(self.exit_url)
