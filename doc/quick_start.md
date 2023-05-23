@@ -26,23 +26,32 @@ environment = {
 # When you control authorization yourself
 ```python
 # Create application
-saxo = saxobank.Application(environment)
+saxo = saxobank.Application(environment, sqlite='abc.dat')
 
 # User Sesion
-session = saxo.create_session(sqlib='abc.dat')
+session = saxo.create_session(trade_level=models.TradeLevel.OrdersOnly)
 
 # Send request
-req_orders = req.Orders(Amount=10.0, AmountType=OrderAmountType.CurrencyAmount)
-res_orders = await session.place_new_order(req_orders, access_token='xxxx')
+req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountType.CurrencyAmount)
+res_orders = await session.trade.place_new_order(req_orders, access_token='xxxx')
 
 # Subscribe
-req_chart = ChartSubscriptionRequest(AssetType=AssetType.FxSwap, Uic=99)
-async with session.subscribe(ChartSubscription(arguments=req_chart)) as chart_subscription:
+streaming = session.create_streaming(access_token='xxxx')
+req_chart = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99)
+async with streaming.trade.chart_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1") as chart_subscription:
     pass
+
+# Tell new access token if changed
+await streaming.re_auth(access_token='yyyy')
+
+# Cancel multiple subscriptions
+await streaming.trade.remove_subscriptions(tag="strategy1")
+
+
 
 # Utils
 # Task whatch your session capability and stay FullTrade 
-asyncio.create_task(saxo.keep_session_capability())
+# asyncio.create_task(saxo.keep_session_capability())
 
 
 
