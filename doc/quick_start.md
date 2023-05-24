@@ -36,21 +36,32 @@ req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountTy
 res_orders = await session.trade.place_new_order(req_orders, access_token='xxxx')
 
 # Subscribe
+async def your_strategy(subscription):
+    async with subscription:
+        while True:
+            price = await subscription.pop()
+            
 req_chart = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99)
+
 streaming = session.create_streaming(access_token='xxxx')
-async with streaming.trade.chart_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1") as chart_subscription:
-    pass
+chart_subscription = await streaming.trade.chart_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+asyncio.run(your_strategy(chart_subscription))
 
 # Equivalent to
+async def your_strategy2(stream):
+    while True:
+        price = await stream.pop()
+
 context_id = models.ContextId(12)
 stream_session = saxobank.StreamSession(client_session, context_id=context_id)
 stream_session.connect(access_token='xxxx')
 
 reference_id = models.ReferenceId(34)
 subscription = saxobank.Subscription(queue, client_session, context_id=context_id, reference_id=reference_id)
-async with subscription.create():
-    pass
-
+snapshot = await subscription.create(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+stream = await subscription.listen()
+asyncio.run(your_strategy(stream))
+ret = await subscription.remove()
 
 
 # Tell new access token if changed
