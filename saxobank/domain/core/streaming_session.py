@@ -97,16 +97,6 @@ class StreamingSession:
     def _create_websocket_connect_request(self) -> dict:
         return models.RequestCreateWebSocketConnection(ContextId=self.context_id).dict()
 
-    # async def create_subscription(self, subscription_class: BaseSubscription, reference_id: str, arguments: Optional[dict] = None) -> Subscription:
-    #     subscription = subscription_class(self.context_id, reference_id, self.dispatcher)
-
-    #     try:
-    #         response = await self.subscription.create(arguments)
-    #     else:
-    #         subscription.set_snapshot(response.Snapshot)
-    #         self.subscriptions.append(subscription)
-    #         return subscription
-
     async def connect(self, access_token: str) -> ContextManager:
         params = self._create_websocket_connect_request()
         return await self.ws_client.ws_connect(self.WS_CONNECT_URL)
@@ -120,8 +110,6 @@ class StreamingSession:
     async def reconnect(self, access_token: str | None = None, last_message_id: int | None = None):
         pass
 
-    # async def remove_subscription(self, subscription_class: BaseSubscription, reference_id: str):
-    #     pass
 
 
 class ContextManager:
@@ -154,13 +142,20 @@ class Subscription:
         self.ctxt_id = context_id
         self.ref_id = reference_id
 
-    async def reset_subscription(self, reference_id):
-        self.http_client.request(self.entry_url, self.referece_id, reference_id)
-        self.reference_id = reference_id
-
     async def __enter__(self):
-        self.http_client.request(self.entry_url)
+        self.create()
         yield await self.queue.pop()
 
     async def __exit__(self):
+        self.remove()
+
+    async def create(self):
+        self.http_client.request(self.entry_url)
+
+    async def reset(self, reference_id):
+        self.http_client.request(self.entry_url, self.referece_id, reference_id)
+        self.reference_id = reference_id
+
+    async def remove(self):
         self.http_client.request(self.exit_url)
+
