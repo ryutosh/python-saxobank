@@ -47,6 +47,19 @@ class ContextId:
         )
 
 
+class ReferenceId:
+    def __init__(self, id: int | str):
+        assert self.validate(id)
+        self.__id = str(id)
+
+    def __repr__(self):
+        return repr(self.__id)
+
+    @classmethod
+    def validate(cls, id: int | str) -> bool:
+        return True
+
+
 class SaxobankModel(BaseModel):
     def path_items(self) -> dict[str, Any]:
         return {}

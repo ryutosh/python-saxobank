@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import abc
 
+import aiohttp
 from api_call import Dispatcher
 from endpoint import Endpoint
 from streaming_session import StreamingSession
 from user_session import UserSession
 
-# from abc import ABC
 from saxobank import models
+from saxobank.models.common import ContextId, ReferenceId
+
+# from abc import ABC
 
 
 class BaseSubscription(abc.ABC):
@@ -17,10 +20,25 @@ class BaseSubscription(abc.ABC):
     endpoint_remove: Endpoint
     endpoint_remove_multiple: Endpoint
 
-    def __init__(self, reference_id: str, streaming_session: StreamingSession, dispatcher: Dispatcher) -> None:
+    # def __init__(self, context_id: ContextId, reference_id: ReferenceId, streaming_session: StreamingSession, dispatcher: Dispatcher) -> None:
+    def __init__(
+        self,
+        context_id: ContextId,
+        reference_id: ReferenceId,
+        arguments: SaxobankModel,
+        format: str,
+        refresh_rate: int,
+        tag: str,
+        user_session: UserSession,
+    ) -> None:
+        self.http = http_client
+        self.context_id = context_id
         self.reference_id = reference_id
-        self.streaming_session = streaming_session
-        self.dispatcher = dispatcher
+        # self.streaming_session = streaming_session
+        self.user_session = user_session
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return await self.remove()
 
     async def create(self, arguments: dict | None = None):
         # has argument necessary case :  https://www.developer.saxo/openapi/referencedocs/trade/v1/infoprices/addsubscriptionasync/b0ffda941b3291f3dd9319673cc88403
@@ -28,20 +46,22 @@ class BaseSubscription(abc.ABC):
         #                                https://www.developer.saxo/openapi/referencedocs/trade/v1/prices/addsubscriptionasync/e1dbfa7d3e2ef801a7c4ade9e57f8812
         #                                https://www.developer.saxo/openapi/referencedocs/trade/v1/prices/addmultilegpricessubscriptionasync/7251ff94a91106a3b60a4d17df574694
         params = models.RequestCreateSubscription(
-            ContextId=self.streaming_session.context_id,
+            ContextId=self.context_id,
             ReferenceId=self.reference_id,
             Format=self.FORMAT_JSON,
             Arguments=arguments,
         ).dict(exclude_unset=True, exclude_none=True)
 
-        return await self.dispatcher.request_endpoint(self.endpoint_create, params)
+        return await self.user_session.request_endpoint(self.endpoint_create, params)
+
+    __aenter__ = create
 
     async def remove(self):
         params = models.RequestRemoveSubscription(
             ContextId=self.streaming_session.context_id, ReferenceId=self.reference_id
         ).dict()
 
-        return await self.dispatcher.request_endpoint(self.endpoint_remove, params)
+        return await self.user_session.request_endpoint(self.endpoint_remove, params)
 
     async def remove_multiple(self):
         pass

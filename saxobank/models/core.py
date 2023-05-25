@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .common import SaxobankModel
+from .common import ContextId, ReferenceId, SaxobankModel
 
 
 class RequestCreateSubscription(SaxobankModel):
@@ -29,6 +29,15 @@ class RequestCreateSubscription(SaxobankModel):
     """
 
 
+class StreamingwsConnectReq(SaxobankModel):
+    contextid: ContextId
+    messageid: Optional[int]
+
+
+class StreamingwsAuthorizeReq(SaxobankModel):
+    contextid: ContextId
+
+
 class ResponseCreateSubscription(SaxobankModel):
     RefreshRate: int
     Snapshot: Any
@@ -37,12 +46,3 @@ class ResponseCreateSubscription(SaxobankModel):
 class RequestRemoveSubscription(SaxobankModel):
     ContextId: str
     ReferenceId: str
-
-
-class RequestWebSocketConnection(SaxobankModel):
-    contextId: str
-    messageid: Optional[int]
-
-
-class RequestWebSocketReAuthorization(SaxobankModel):
-    contextid: str
