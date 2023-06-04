@@ -36,23 +36,45 @@ req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountTy
 res_orders = await session.trade_post_orders(req_orders, access_token='xxxx')
 
 # Subscribe
-async def your_strategy(queue):
-    async for data in queue.pop():
-        price = data.MidPrice
+async def your_strategy(streaming):
+    req_chart_short = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99, Resolution=60)
+    req_chart_long = req_chart_short.replace(Resolution=60*60*24)
 
-queue = asyncio.Queue()
-asyncio.run(your_strategy(queue))
-
-req_chart_short = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99, Resolution=60)
-req_chart_long = req_chart_short.replace(Resolution=60*60*24)
-
-streaming = session.create_streaming()
-async with streaming.connect(access_token='xxxx') as stream:
     reference_id_short = ReferenceId()
     reference_id_long = ReferenceId()
 
     res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
     res_long = await streaming.chart_subscription(reference_id=reference_id_long, arguments=req_chart_long, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+
+    #async for data in queue.pop():
+    #    price = data.MidPrice
+    short_data = None
+    long_data = None
+
+    try:
+        async for short in queue_short:
+            short_data = short
+
+    except ResetSubscriptionException as ex:
+        await streaming.chart_remove_subscription(reference_id=reference_id_short)
+        reference_id_short = ReferenceId()
+        res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+
+    except PermanentlyDisabled as ex:
+        break
+
+    except DisconnectedException as ex:
+        alert()
+        if not streaming.reconnected:
+            streaming.reconnect()
+
+
+queue = asyncio.Queue()
+asyncio.run(your_strategy(queue))
+
+
+streaming = session.create_streaming()
+async with streaming.connect(access_token='xxxx') as stream:
 
     snapshot = res.snapshot
     queue.put(snapshot)
