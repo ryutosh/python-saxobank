@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import string
 from datetime import datetime
-from enum import Enum
-from typing import Any, Optional
+from enum import Enum, auto
+from typing import Any, Optional, Type
 from urllib.parse import parse_qs
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -32,9 +33,16 @@ class ContextId:
     MIN_ID_LENGTH: int = 1
     ACCEPTABLE_CHARS: str = string.ascii_letters + string.digits + "-"
 
-    def __init__(self, id: int | str):
+    def __init__(self, id: int | str | None = None):
+        id = id if id else str(uuid4()).replace("-", "")
         assert self.validate(id)
         self.__id = str(id)
+
+    def __eq__(self, o: object):
+        return self.__id == str(o)
+
+    def __str__(self):
+        return str(self.__id)
 
     def __repr__(self):
         return repr(self.__id)
@@ -47,10 +55,29 @@ class ContextId:
         )
 
 
+class HeartbeatReason(Enum):
+    NoNewData = auto()
+    SubscriptionTemporarilyDisabled = auto()
+    SubscriptionPermanentlyDisabled = auto()
+
+
+class ODataModel(BaseModel):
+    inlinecount: InlineCountValue
+    top: Optional[int] = Field(alias="$top")
+    skip: Optional[int] = Field(alias="$skip")
+
+
 class ReferenceId:
-    def __init__(self, id: int | str):
+    def __init__(self, id: int | str | None = None):
+        id = id if id else str(uuid4())
         assert self.validate(id)
         self.__id = str(id)
+
+    def __eq__(self, o: object):
+        return self.__id == str(o)
+
+    def __str__(self):
+        return str(self.__id)
 
     def __repr__(self):
         return repr(self.__id)
@@ -68,6 +95,17 @@ class SaxobankModel(BaseModel):
         arbitrary_types_allowed = True
 
 
+class SubscriptionsResModel(SaxobankModel):
+    ContextId: ContextId
+    Format: str
+    InactivityTimeout: int
+    ReferenceId: ReferenceId
+    RefreshRate: int
+    Snapshot: Type[SaxobankModel]
+    State: str
+    Tag: str
+
+
 class InlineCountValue(Enum):
     """
     Defines an enumeration for $inlinecount query option values.
@@ -75,12 +113,6 @@ class InlineCountValue(Enum):
 
     ALL_PAGES = "AllPages"  # The results will contain a total count of items in the queried dataset.
     NONE = "None"  # The results will not contain an inline count.
-
-
-class ODataModel(BaseModel):
-    inlinecount: InlineCountValue
-    top: Optional[int] = Field(alias="$top")
-    skip: Optional[int] = Field(alias="$skip")
 
 
 # class CreateSubscriptionRequest(SaxobankModel):

@@ -1,8 +1,29 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, List, Literal, Optional
 
-from .common import ContextId, ReferenceId, SaxobankModel
+from saxobank.models import common
+
+from .common import ContextId, HeartbeatReason, ReferenceId, SaxobankModel
+
+
+class StreamingwsHeartbeatSubscriptionRes(SaxobankModel):
+    OriginatingReferenceId: ReferenceId
+    Reason: HeartbeatReason
+
+
+class StreamingwsHeartbeatRes(SaxobankModel):
+    ReferenceId: Literal["_heartbeat"]
+    Heartbeats: StreamingwsHeartbeatSubscriptionRes
+
+
+class StreamingwsDisconnectRes(SaxobankModel):
+    ReferenceId: Literal["_disconnect"]
+
+
+class StreamingwsResetSubscriptionsRes(SaxobankModel):
+    ReferenceId: Literal["_resetsubscriptions"]
+    TargetReferenceIds: List[common.ReferenceId]
 
 
 class RequestCreateSubscription(SaxobankModel):

@@ -26,50 +26,62 @@ environment = {
 # When you control authorization yourself
 ```python
 # Create application
-saxo = saxobank.Application(environment, sqlite='abc.dat')
+saxo = saxobank.Application(environment)
 
 # User Sesion
-session = saxo.create_session(trade_level=models.TradeLevel.OrdersOnly)
+session = saxo.create_session()
 
 # Send request
 req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountType.CurrencyAmount)
-res_orders = await session.trade.place_new_order(req_orders, access_token='xxxx')
+res_orders = await session.trade_post_orders(req_orders, access_token='xxxx')
 
 # Subscribe
-async def your_strategy(subscription):
-    async with subscription:
-        while True:
-            price = await subscription.pop()
-            
-req_chart = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99)
+async def your_strategy(queue):
+    async for data in queue.pop():
+        price = data.MidPrice
 
-streaming = session.create_streaming(access_token='xxxx')
-chart_subscription = await streaming.trade.chart_subscription(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
-asyncio.run(your_strategy(chart_subscription))
+queue = asyncio.Queue()
+asyncio.run(your_strategy(queue))
 
-# Equivalent to
-async def your_strategy2(stream):
-    while True:
-        price = await stream.pop()
+req_chart_short = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99, Resolution=60)
+req_chart_long = req_chart_short.replace(Resolution=60*60*24)
 
-context_id = models.ContextId(12)
-stream_session = saxobank.StreamSession(client_session, context_id=context_id)
-stream_session.connect(access_token='xxxx')
+streaming = session.create_streaming()
+async with streaming.connect(access_token='xxxx') as stream:
+    reference_id_short = ReferenceId()
+    reference_id_long = ReferenceId()
 
-reference_id = models.ReferenceId(34)
-subscription = saxobank.Subscription(queue, client_session, context_id=context_id, reference_id=reference_id)
-snapshot = await subscription.create(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
-stream = await subscription.listen()
-asyncio.run(your_strategy(stream))
-ret = await subscription.remove()
+    res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+    res_long = await streaming.chart_subscription(reference_id=reference_id_long, arguments=req_chart_long, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+
+    snapshot = res.snapshot
+    queue.put(snapshot)
+
+    async for data in stream:
+        if data.reference_id == chart_subscription.reference_id:
+            snapshot.accept_delta(data.payload)
+            queue.put(snapshot)
+        
+        elif data.reference_id == '_reset_subscription':
+            chart_subscription.remove()
+            res = await chart_subscription.create(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+        
+        elif data.reference_id == '_heartbeat' and data.reason == 'PermanentlyDisabled':
+            queue.put(PermanentlyDisabledException())
+            break
+
+        elif data.reference_id == '_disconnect':
+            queue.put(DisconnectException())
+            alert()
+            break
+
+    await streaming.chart_delete_multiple_subscriptions(tag="strategy1")
+
+
 
 
 # Tell new access token if changed
 await streaming.re_auth(access_token='yyyy')
-
-# Cancel multiple subscriptions
-await streaming.trade.remove_subscriptions(tag="strategy1")
-
 
 
 # Utils
