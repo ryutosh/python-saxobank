@@ -182,6 +182,12 @@ class StreamingSession:
 
         return await self.session.openapi_request(self.Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, req, acess_token=access_token)
 
+    def streamer(self, reference_id: ReferenceId, snapshot: SaxobankModel, timeout: int):
+        streamer = self.streamers[reference_id]
+        streamer.set_snapshot(snapshot)
+        streamer.timeout = timeout
+        return streamer
+
     # @asynccontextmanager
     # async def closedpositions_subscription(self, arguments):
     #     reference_id = ReferenceId()
@@ -209,20 +215,29 @@ class Streamers:
 
 
 class Streamer:
-    def __init__(self, context_id: ContextId, reference_id: ReferenceId, response_model: SaxobankModel, timeout: int | None = None):
+    def __init__(self, context_id: ContextId, reference_id: ReferenceId, response_model: SaxobankModel | None = None, timeout: int | None = None):
         self.context_id = context_id
         self.reference_id = reference_id
-        self.res_model = response_model
+
+        if response_model:
+            self.response_model = response_model
         if timeout is not None:
             self.set_timeout(timeout)
 
         self.queue = asyncio.Queue()
+        self.snapshot = None
 
     def __eq__(self, o: object) -> bool:
         try:
             return (self.context_id == o.context_id) and (self.reference_id == o.reference_id)
         except AttributeError:
             return False
+
+    async def put(self, data_message: DataMessage):
+        self.queue.put(data_message)
+    
+    async def get(self):
+        assert self.snapshot
 
     def set_timeout(self, timeout: int):
         self.timeout = timeout

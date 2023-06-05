@@ -43,61 +43,58 @@ async def your_strategy(streaming):
     reference_id_short = ReferenceId()
     reference_id_long = ReferenceId()
 
-    res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+    res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1", access_token='xxxx')
     res_long = await streaming.chart_subscription(reference_id=reference_id_long, arguments=req_chart_long, format=models.Format.Json, refresh_rate=1, tag="strategy1")
 
-    #async for data in queue.pop():
-    #    price = data.MidPrice
-    short_data = None
-    long_data = None
+    async with streaming.streamer(reference_id=reference_id_short) as stream_short, streaming.streamer(reference_id=reference_id_long) as stream_long:
+        while True:
+            try:
+                snapshot_short = await stream_short.pop()
+                snapshot_long = await stream_long.pop()
 
-    try:
-        async for short in queue_short:
-            short_data = short
+            except ResetSubscriptionException as ex:
+                await streaming.chart_remove_subscription(reference_id=reference_id_short)
+                reference_id_short = ReferenceId()
+                res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
 
-    except ResetSubscriptionException as ex:
-        await streaming.chart_remove_subscription(reference_id=reference_id_short)
-        reference_id_short = ReferenceId()
-        res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+            except PermanentlyDisabled as ex:
+                break
 
-    except PermanentlyDisabled as ex:
-        break
-
-    except DisconnectedException as ex:
-        alert()
-        if not streaming.reconnected:
-            streaming.reconnect()
+            except DisconnectedException as ex:
+                alert()
+                if not streaming.reconnected:
+                    streaming.reconnect()
 
 
 queue = asyncio.Queue()
 asyncio.run(your_strategy(queue))
 
 
-streaming = session.create_streaming()
-async with streaming.connect(access_token='xxxx') as stream:
+streaming = session.create_streaming(access_token='xxxx', on_disconnect=lambda x: alart(x))
+# async with streaming.connect() as stream:
 
-    snapshot = res.snapshot
-    queue.put(snapshot)
+#     snapshot = res.snapshot
+#     queue.put(snapshot)
 
-    async for data in stream:
-        if data.reference_id == chart_subscription.reference_id:
-            snapshot.accept_delta(data.payload)
-            queue.put(snapshot)
+#     async for data in stream:
+#         if data.reference_id == chart_subscription.reference_id:
+#             snapshot.accept_delta(data.payload)
+#             queue.put(snapshot)
         
-        elif data.reference_id == '_reset_subscription':
-            chart_subscription.remove()
-            res = await chart_subscription.create(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+#         elif data.reference_id == '_reset_subscription':
+#             chart_subscription.remove()
+#             res = await chart_subscription.create(arguments=req_chart, format=models.Format.Json, refresh_rate=1, tag="strategy1")
         
-        elif data.reference_id == '_heartbeat' and data.reason == 'PermanentlyDisabled':
-            queue.put(PermanentlyDisabledException())
-            break
+#         elif data.reference_id == '_heartbeat' and data.reason == 'PermanentlyDisabled':
+#             queue.put(PermanentlyDisabledException())
+#             break
 
-        elif data.reference_id == '_disconnect':
-            queue.put(DisconnectException())
-            alert()
-            break
+#         elif data.reference_id == '_disconnect':
+#             queue.put(DisconnectException())
+#             alert()
+#             break
 
-    await streaming.chart_delete_multiple_subscriptions(tag="strategy1")
+await streaming.chart_delete_multiple_subscriptions(tag="strategy1")
 
 
 
