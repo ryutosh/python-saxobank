@@ -6,9 +6,9 @@ from typing import Optional as N
 
 from pydantic import ValidationError, validator
 
-from . import enums as e
+from . import common as c
+from . import enum as e
 from . import port
-from .common import AccountKey, OrderDuration, SaxobankModel
 
 # ****************************************************************
 # SubModels

@@ -66,11 +66,15 @@ async def your_strategy(streaming):
                     streaming.reconnect()
 
 
-queue = asyncio.Queue()
+# Run streaming service
+streaming = session.create_streaming()
+service = asyncio.create_task(streaming.service(access_token='xxxx', on_disconnect=lambda x: alart(x)))
+
+
+
 asyncio.run(your_strategy(queue))
 
 
-streaming = session.create_streaming(access_token='xxxx', on_disconnect=lambda x: alart(x))
 # async with streaming.connect() as stream:
 
 #     snapshot = res.snapshot

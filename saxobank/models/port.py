@@ -6,29 +6,29 @@ from decimal import Decimal
 from typing import Optional as N
 from urllib.parse import quote
 
-from . import enums as e
-from .common import AccountKey, ClientKey, OrderDuration, SaxobankModel, SaxobankPagedRequestMoel, SaxobankPagedResponseMoel
+from . import common as c
+from . import enum as e
 
 # ****************************************************************
 # SubModels
 # ****************************************************************
 
 
-class RelatedOrderInfo(SaxobankModel):
+class RelatedOrderInfo(c.SaxobankModel):
     Amount: N[Decimal]
-    Duration: N[OrderDuration]
+    Duration: N[e.OrderDuration]
     OpenOrderType: N[e.OrderType]
     OrderId: N[str]
 
 
 # Dynamic Contents for a Position. The following fields are updated as prices change or the position is updated, filled or closed.
-class PositionDynamic(SaxobankModel):
+class PositionDynamic(c.SaxobankModel):
     MarketState: N[e.MarketState]
 
 
 # Static contents for a position. The following fields do not change when the price is updated
-class PositionStatic(SaxobankModel):
-    AccountKey: N[AccountKey]
+class PositionStatic(c.SaxobankModel):
+    AccountKey: N[e.AccountKey]
     AssetType: N[e.AssetType]
     Uic: N[int]
     Amount: N[Decimal]
@@ -46,7 +46,7 @@ class PositionStatic(SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class PortOrdersReq(SaxobankPagedRequestMoel):
+class PortOrdersReq(c.SaxobankPagedRequestMoel):
     FieldGroups: N[list[e.OrderFieldGroup]]
     PriceMode: N[e.PriceMode]
 
@@ -54,19 +54,19 @@ class PortOrdersReq(SaxobankPagedRequestMoel):
         use_enum_values = True
 
 
-class PositionsReq(SaxobankModel):
-    ClientKey: ClientKey
-    AccountKey: N[AccountKey]
+class PositionsReq(c.SaxobankModel):
+    ClientKey: c.ClientKey
+    AccountKey: N[e.AccountKey]
     FieldGroups: N[list[e.PositionFieldGroup]]
 
     class Config:
         use_enum_values = True
 
 
-class PositionsPositionIdReq(SaxobankModel):
-    ClientKey: ClientKey
+class PositionsPositionIdReq(c.SaxobankModel):
+    ClientKey: c.ClientKey
     PositionId: str
-    # AccountKey: N[AccountKey]
+    # AccountKey: N[e.AccountKey]
     # FieldGroups: N[list[e.PositionFieldGroup]]
 
     def path_items(self) -> dict[str, str]:
@@ -88,24 +88,51 @@ class PositionsMeRequest(SaxobankPagedRequestMoel):
 # ****************************************************************
 # Response Main Models
 # ****************************************************************
-class PortOrdersRes(SaxobankModel):
+# Not fully covered
+class ClosedPosition(c.SaxobankModel):
+    AssetType: c.AssetType
+
+
+# Not fully covered
+class ClosedPositionResponse(c.SaxobankModel, c.SubscriptionSnapshotModel):
+    ClosedPositionUniqueId: str
+    NetPositionId: Optional[str]
+    ClosedPosition: Optional[ClosedPosition]
+
+    def __eq__(self, o: object):
+        assert isinstance(o, self.__class__)
+        try:
+            return self.ClosedPositionUniqueId == o.ClosedPositionUniqueId
+        except AttributeError:
+            return False
+
+
+class ListResultClosedPositionResponse(c.ListResultModel):
+    Data: List[ClosedPositionResponse]
+
+
+class ClosedpositionsSubscriptionRes(c.SubscriptionsResModel):
+    Snapshot: ListResultClosedPositionResponse
+
+
+class PortOrdersRes(c.SaxobankModel):
     AccountId: str
     AccountKey: AccountKey
     Amount: Decimal
-    AssetType: e.AssetType
+    AssetType: c.AssetType
     Uic: int
-    BuySell: e.BuySell
+    BuySell: c.BuySell
     Duration: OrderDuration
     FilledAmount: N[Decimal]
     IsForceOpen: N[bool]
     IsMarketOpen: N[bool]
     MarketState: N[e.MarketState]
-    OpenOrderType: e.OrderType
+    OpenOrderType: c.OrderType
     OrderId: str
     ExternalReference: N[str]
     Price: N[Decimal]
     RelatedPositionId: N[str]
-    Status: e.OrderStatus
+    Status: c.OrderStatus
     StopLimitPrice: N[Decimal]
     TrailingStopDistanceToMarket: N[Decimal]
     TrailingStopStep: N[Decimal]
@@ -124,16 +151,16 @@ class PortOrdersResPaged(SaxobankPagedResponseMoel):
         return None
 
 
-class PortClientsMeRes(SaxobankModel):
+class PortClientsMeRes(c.SaxobankModel):
     ClientId: str
     ClientKey: ClientKey
     DefaultAccountId: str
     DefaultAccountKey: AccountKey
-    PositionNettingMode: e.ClientPositionNettingMode
-    PositionNettingProfile: e.ClientPositionNettingProfile
+    PositionNettingMode: c.ClientPositionNettingMode
+    PositionNettingProfile: c.ClientPositionNettingProfile
 
 
-class PositionsMeResponse(SaxobankModel):
+class PositionsMeResponse(c.SaxobankModel):
     NetPositionId: N[str]
     PositionId: N[str]
     PositionBase: N[PositionStatic]

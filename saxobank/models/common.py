@@ -3,13 +3,13 @@ from __future__ import annotations
 import string
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type, Union
 from urllib.parse import parse_qs
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, HttpUrl
 
-from . import enums as e
+from . import enum as e
 
 
 class AccountKey:
@@ -95,15 +95,43 @@ class SaxobankModel(BaseModel):
         arbitrary_types_allowed = True
 
 
+class ListResultModel(SaxobankModel):
+    count: Optional[int] = Field(alias="__count")
+    next: HttpUrl = Field(alias="__next")
+    MaxRows: Optional[int]
+    Data: List[Type[SubscriptionSnapshotModel]]
+
+    def apply_delta(self, delta: SubscriptionSnapshotModel):
+        copy = self.Data.copy()
+
+        try:
+            idx = copy.index(delta)
+
+        except ValueError:
+            copy.append(delta)
+
+        else:
+            copy[idx] = copy[idx].apply_delta(delta)
+
+        return copy
+
+
 class SubscriptionsResModel(SaxobankModel):
     ContextId: ContextId
     Format: str
     InactivityTimeout: int
     ReferenceId: ReferenceId
     RefreshRate: int
-    Snapshot: Type[SaxobankModel]
+    Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
     State: str
     Tag: str
+
+
+class SubscriptionSnapshotModel(SaxobankModel):
+    def apply_delta(self, delta: SubscriptionSnapshotModel):
+        d = self.dict()
+        d.update(delta.dict(exclude_unset=True))
+        return delta.__class__(**d)
 
 
 class InlineCountValue(Enum):
@@ -128,7 +156,7 @@ class SaxobankPagedRequestMoel(SaxobankModel):
     skip: int = Field(None, alias="$skip")
 
 
-class SaxobankPagedResponseMoel(SaxobankModel):
+class SaxobankPagedResponseModel(SaxobankModel):
     next: HttpUrl = Field(None, alias="__next")
     # next: HttpUrl | None = None
 
