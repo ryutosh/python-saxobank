@@ -74,7 +74,8 @@ class ReferenceId:
         self.__id = str(id)
 
     def __eq__(self, o: object):
-        return self.__id == str(o)
+        assert isinstance(o, self.__class__)
+        return self.__id == o.__id
 
     def __str__(self):
         return str(self.__id)

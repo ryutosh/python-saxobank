@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from urllib.parse import urljoin
 from typing import Any
+from urllib.parse import urljoin
+
 
 class Dimension(str, Enum):
     ChartMinute = "ChartMinute"

@@ -2,17 +2,19 @@ import abc
 import asyncio
 import json
 import uuid
+from collections import UserDict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, Optional
 
 import aiohttp
 import exception
 from api_call import Dispatcher
 from endpoint import Endpoint
 from environment import WsBaseUrl
+from user_session import UserSession
 
 from saxobank.models.common import ContextId, ReferenceId, SaxobankModel
 from saxobank.models.core import (
@@ -128,8 +130,11 @@ class Streaming:
     def __init__(self, ws_resp: aiohttp.ClientWebSocketResponse, streamers: Streamers):
         self.ws_resp = ws_resp
 
-    def __iter__(self):
+    def __aiter__(self):
         yield await self.receive()
+
+    async def close(self) -> bool:
+        return await self.ws_resp.close()
 
     async def receive(self) -> DataMessage:
         return DataMessage(await self.ws_resp.receive_bytes())
@@ -144,31 +149,30 @@ class StreamingSession:
         user_session: UserSession,
         ws_client: aiohttp.ClientSession,
         context_id: ContextId,
-        access_token: str | None = None,
-        message_id: int | None = None,
+        access_token: Optional[str] = None,
+        message_id: Optional[int] = None,
     ) -> None:
         self.user_session = user_session
         self.ws_client = ws_client
         self.context_id = context_id
         self.access_token = access_token
         self.message_id = message_id
-        self.ws_stream = None
-        self.streamers = Streamers()
-        self.streaming = None
+        self.streamers = Streamers(self.context_id)
+        self.streaming: Optional[Streaming] = None
 
-    # async def __aexit__(self, exc_type, exc_value, traceback):
-    #     self.disconnect(self)
-
-    async def connect(self, access_token: str | None = None) -> Streaming:
+    async def connect(self, access_token: Optional[str] = None) -> Streaming:
         params = StreamingwsConnectReq(contextid=self.context_id, messageid=self.message_id).dict()
-        self.ws_stream = await self.ws_client.ws_connect(self.WS_CONNECT_URL, params=params)
-        return Streaming(self.ws_stream, self.streamers)
+        ws_stream = await self.ws_client.ws_connect(self.WS_CONNECT_URL, params=params)
+        return Streaming(ws_stream, self.streamers)
 
     # __aenter__ = connect
 
     async def disconnect(self) -> bool:
-        assert self.ws_stream
-        return self.ws_stream.close()
+        assert self.streaming
+        return await self.streaming.close()
+
+    # async def __aexit__(self, exc_type, exc_value, traceback):
+    #     self.disconnect(self)
 
     async def service(self) -> None:
         try:
@@ -180,22 +184,31 @@ class StreamingSession:
                     self.message_id = data_message.message_id
                     self.streamers[data_message.reference_id].put(data_message)
 
-        except CancelledError:
-            self.disconnect()
+        except asyncio.CancelledError:
+            pass
+
+        finally:
+            await self.disconnect()
 
     async def reauthorize(self, access_token: str):
+        self.access_token = access_token
         params = StreamingwsAuthorizeReq(contextid=self.context_id).dict()
         _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
 
-    async def closedpositions_subscription(self, reference_id, arguments, format, refresh_rate) -> SaxobankModel:
+    # async def __create_subscription(self, reference_id: ReferenceId, arguments: SaxobankModel)
+    async def closedpositions_subscription(self, reference_id: ReferenceId, arguments, format, refresh_rate) -> SaxobankModel:
         assert self.streaming
         req = Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION.RequestModel(
             ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
         ).dict(exclude_unset=True, exclude_none=True)
 
-        return await self.session.openapi_request(
+        res = await self.session.openapi_request(
             self.Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION, req, acess_token=access_token
         )
+
+        # template add snapshot and timeout
+        if hasattr(res, "Snapshot"):
+            self.streamers[reference_id].set_snapshot(res.Snapshot)
 
     async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:
         req = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, RequestModel(
@@ -233,8 +246,14 @@ class StreamingSession:
     #         loop.run(self.connect())
 
 
-class Streamers:
-    pass
+class Streamers(UserDict):
+    def __init__(self, context_id: ContextId):
+        self.context_id = context_id
+        super().__init__()
+
+    def __missing__(self, key: ReferenceId):
+        self[key] = streamer = Streamer(self.context_id, key)
+        return streamer
 
 
 class Streamer:

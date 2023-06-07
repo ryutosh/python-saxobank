@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from functools import lru_cache, partial, partialmethod
-from types import SimpleNamespace
-from typing import Final
-from urllib.parse import urljoin
+from functools import partialmethod
 
 import aiohttp
 import simplejson as json
 from endpoint import ContentType, Endpoint, EndpointDefinition, HttpMethod
 from environment import RestBaseUrl, WsBaseUrl
+from model.common import SaxobankModel
 from streaming_session import StreamingSession
-
-from saxobank.models import OrdersRequest, OrdersResponse, SaxobankModel
-from saxobank.models.common import ContextId
 
 log = getLogger(__name__)
 
@@ -35,9 +30,6 @@ class UserSession:
         self.limiter = rate_limiter
         self.token = access_token
 
-    async def _auth_header(self, access_token: str | None = None):
-        return {"Authorization": f"Bearer {access_token if access_token else self.token}"}
-
     async def openapi_request(
         self,
         endpoint: EndpointDefinition,
@@ -50,10 +42,10 @@ class UserSession:
         params = req_data if endpoint.method == HttpMethod.GET else None
         data = req_data if endpoint.method != HttpMethod.GET else None
 
-        await self.rate_limiter.throttle(endpoint.dimension, endpoint.is_order, effectual_until)
+        await self.limiter.throttle(endpoint.dimension, endpoint.is_order, effectual_until)
 
         try:
-            headers = self._auth_header(access_token)
+            headers = {"Authorization": f"Bearer {access_token if access_token else self.token}"}
             response = await self.http.request(
                 endpoint.method,
                 url,
