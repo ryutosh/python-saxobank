@@ -27,7 +27,6 @@ winko.toml
 env/
 venv/
 .venv/
-env*
 dist/
 build/
 *.egg
