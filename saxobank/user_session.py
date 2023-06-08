@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 import aiohttp
 
 from . import exception
-from .endpoint import ContentType, Dimension, Endpoint, EndpointDefinition, HttpMethod
+from .endpoint import ContentType, Dimension, Endpoint, HttpMethod
 from .environment import RestBaseUrl
 from .model.common import SaxobankModel
 
@@ -18,10 +18,6 @@ class RateLimiter:
         self, dimension: Optional[Dimension] = None, is_order: bool = False, effectual_until: Optional[datetime] = None
     ):
         pass
-
-
-# p = Endpoint.P1
-print(dir(Endpoint))
 
 
 class UserSession:
@@ -80,8 +76,8 @@ class UserSession:
         return status, headers, body
 
     # Porfolio Service Group
-    port_get_clients_me = partialmethod(openapi_request, Endpoint.P1)
-    port_get_positions_positionid = partialmethod(openapi_request, Endpoint.PORT_GET_POSITIONS_POSITION_ID)
-    port_post_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION)
-    port_patch_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_PATCH_CLOSEDPOSITIONS_SUBSCRIPTION)
-    port_delete_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION)
+    port_get_clients_me = partialmethod(openapi_request, Endpoint.PORT_GET_CLIENTS_ME)
+    # port_get_positions_positionid = partialmethod(openapi_request, Endpoint.PORT_GET_POSITIONS_POSITION_ID)
+    # port_post_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION)
+    # port_patch_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_PATCH_CLOSEDPOSITIONS_SUBSCRIPTION)
+    # port_delete_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION)
