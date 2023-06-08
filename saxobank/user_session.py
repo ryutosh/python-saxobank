@@ -80,4 +80,3 @@ class UserSession:
     port_delete_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION)
 
 
-sx = UserSession(None, None, None)
