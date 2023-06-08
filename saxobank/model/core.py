@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any, List, Literal, Optional
 
-from saxobank.models import common
-
+from . import common
 from .common import ContextId, HeartbeatReason, ReferenceId, SaxobankModel
 
 

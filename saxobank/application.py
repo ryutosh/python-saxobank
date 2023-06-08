@@ -47,6 +47,7 @@ class SessionFacade:
 
     class __Portfolio:
         __init__ = UserSession.__init__
+        get_clients_me = UserSession.port_get_clients_me
         get_positions_positionid = UserSession.port_get_positions_positionid
         post_closedpositions_subscription = UserSession.port_post_closedpositions_subscription
         patch_closedpositions_subscription = UserSession.port_patch_closedpositions_subscription

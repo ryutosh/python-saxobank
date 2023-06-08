@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import abc
 
-from endpoint import Endpoint
-from user_session import UserSession
-
-from saxobank import models
-from saxobank.models.common import ContextId, ReferenceId
+from . import model
+from .endpoint import Endpoint
+from .model.common import ContextId, ReferenceId, SaxobankModel
+from .user_session import UserSession
 
 
 class BaseSubscription(abc.ABC):
@@ -19,7 +18,7 @@ class BaseSubscription(abc.ABC):
 # Create Method
 async def __create_with_top(
     self: BaseSubscription,
-    arguments: models.SaxobankModel | None = None,
+    arguments: SaxobankModel | None = None,
     format: str | None = None,
     refresh_rate: int | None = None,
     tag: str | None = None,

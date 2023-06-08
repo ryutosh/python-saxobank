@@ -10,24 +10,23 @@ from functools import lru_cache
 from typing import Any, Literal, Optional
 
 import aiohttp
-import exception
-from api_call import Dispatcher
-from endpoint import Endpoint
-from environment import WsBaseUrl
-from user_session import UserSession
 
-from saxobank.models.common import ContextId, ReferenceId, SaxobankModel
-from saxobank.models.core import (
-    DefinedReferenceId,
+from . import exception
+
+# from api_call import Dispatcher
+from .endpoint import Endpoint
+from .environment import WsBaseUrl
+from .model.common import ContextId, ReferenceId, SaxobankModel
+from .model.core import (
+    # DefinedReferenceId,
     StreamingwsAuthorizeReq,
     StreamingwsConnectReq,
     StreamingwsDisconnectRes,
     StreamingwsHeartbeatRes,
     StreamingwsResetSubscriptionsRes,
 )
-
-from ..saxobank import models
 from .subscription import PortClosedPositions
+from .user_session import UserSession
 
 # from subscription import BaseSubscription
 
@@ -130,7 +129,7 @@ class Streaming:
     def __init__(self, ws_resp: aiohttp.ClientWebSocketResponse, streamers: Streamers):
         self.ws_resp = ws_resp
 
-    def __aiter__(self):
+    async def __aiter__(self):
         yield await self.receive()
 
     async def close(self) -> bool:

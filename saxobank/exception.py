@@ -18,6 +18,14 @@ class TimeoutError(StreamingError):
     pass
 
 
+class RequestError(SaxoException):
+    pass
+
+
+class ResponseError(SaxoException):
+    pass
+
+
 # class RequestError(Exception):
 #     def __init__(self, **arg):
 #         self.arg = arg
