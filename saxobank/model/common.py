@@ -12,20 +12,12 @@ from pydantic import BaseModel, Field, HttpUrl
 from . import enum as e
 
 
-class AccountKey:
-    def __init__(self, value: str):
-        self.__value = str(value)
-
-    def __repr__(self):
-        return repr(self.__value)
+class AccountKey(str):
+    pass
 
 
-class ClientKey:
-    def __init__(self, value: str):
-        self.__value = str(value)
-
-    def __repr__(self):
-        return repr(self.__value)
+class ClientKey(str):
+    pass
 
 
 class ContextId:

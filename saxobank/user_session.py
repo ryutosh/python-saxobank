@@ -7,8 +7,8 @@ from urllib.parse import urljoin
 
 import aiohttp
 
-from . import exception
-from .endpoint import ContentType, Dimension, Endpoint, HttpMethod
+from . import endpoint, exception
+from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
 from .model.common import SaxobankModel
 
@@ -35,7 +35,7 @@ class UserSession:
 
     async def openapi_request(
         self,
-        endpoint: Endpoint,
+        endpoint: endpoint.Endpoint,
         request_model: SaxobankModel | None = None,
         effectual_until: datetime | None = None,
         access_token: str | None = None,
@@ -73,11 +73,13 @@ class UserSession:
         if 401 <= status:
             raise exception.ResponseError(request_info, status, headers)
 
-        return status, headers, body
+        return status, headers, endpoint.response_model.parse_obj(body) if endpoint.response_model else body
 
     # Porfolio Service Group
-    port_get_clients_me = partialmethod(openapi_request, Endpoint.PORT_GET_CLIENTS_ME)
-    # port_get_positions_positionid = partialmethod(openapi_request, Endpoint.PORT_GET_POSITIONS_POSITION_ID)
-    # port_post_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION)
-    # port_patch_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_PATCH_CLOSEDPOSITIONS_SUBSCRIPTION)
-    # port_delete_closedpositions_subscription = partialmethod(openapi_request, Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION)
+    port_get_clients_me = partialmethod(openapi_request, endpoint.port.clients.GET_ME)
+    port_get_positions_positionid = partialmethod(openapi_request, endpoint.port.positions.GET_POSITION_ID)
+    port_post_closedpositions_subscription = partialmethod(openapi_request, endpoint.port.closed_positions.POST_SUBSCRIPTION)
+    port_patch_closedpositions_subscription = partialmethod(openapi_request, endpoint.port.closed_positions.PATCH_SUBSCRIPTION)
+    port_delete_closedpositions_subscription = partialmethod(
+        openapi_request, endpoint.port.closed_positions.DELETE_SUBSCRIPTION
+    )

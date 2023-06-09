@@ -3,12 +3,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import List
-from typing import Optional as N
-from urllib.parse import quote
 
-from . import common as c
-from . import enum as e
+# from typing import List
+from typing import Optional as N
+
+from .. import common as c
+from .. import enum as e
+
+# from urllib.parse import quote
+
 
 # ****************************************************************
 # SubModels
@@ -47,14 +50,6 @@ class PositionStatic(c.SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class PortOrdersReq(c.SaxobankPagedRequestMoel):
-    FieldGroups: N[list[e.OrderFieldGroup]]
-    PriceMode: N[e.PriceMode]
-
-    class Config:
-        use_enum_values = True
-
-
 class PositionsReq(c.SaxobankModel):
     ClientKey: c.ClientKey
     AccountKey: N[c.AccountKey]
@@ -78,87 +73,12 @@ class PositionsPositionIdReq(c.SaxobankModel):
         use_enum_values = True
 
 
-class PositionsMeRequest(SaxobankPagedRequestMoel):
+class PositionsMeRequest(c.SaxobankPagedRequestMoel):
     FieldGroups: N[list[e.PositionFieldGroup]]
     PriceMode: N[e.PriceMode]
 
     class Config:
         use_enum_values = True
-
-
-# ****************************************************************
-# Response Main Models
-# ****************************************************************
-# Not fully covered
-class ClosedPosition(c.SaxobankModel):
-    AssetType: e.AssetType
-
-
-# Not fully covered
-class ClosedPositionResponse(c.SaxobankModel, c.SubscriptionSnapshotModel):
-    ClosedPositionUniqueId: str
-    NetPositionId: N[str]
-    ClosedPosition: N[ClosedPosition]
-
-    def __eq__(self, o: object):
-        assert isinstance(o, self.__class__)
-        try:
-            return self.ClosedPositionUniqueId == o.ClosedPositionUniqueId
-        except AttributeError:
-            return False
-
-
-class ListResultClosedPositionResponse(c.ListResultModel):
-    Data: List[ClosedPositionResponse]
-
-
-class ClosedpositionsSubscriptionRes(c.SubscriptionsResModel):
-    Snapshot: ListResultClosedPositionResponse
-
-
-class PortOrdersRes(c.SaxobankModel):
-    AccountId: str
-    AccountKey: c.AccountKey
-    Amount: Decimal
-    AssetType: e.AssetType
-    Uic: int
-    BuySell: e.BuySell
-    Duration: c.OrderDuration
-    FilledAmount: N[Decimal]
-    IsForceOpen: N[bool]
-    IsMarketOpen: N[bool]
-    MarketState: N[e.MarketState]
-    OpenOrderType: e.OrderType
-    OrderId: str
-    ExternalReference: N[str]
-    Price: N[Decimal]
-    RelatedPositionId: N[str]
-    Status: e.OrderStatus
-    StopLimitPrice: N[Decimal]
-    TrailingStopDistanceToMarket: N[Decimal]
-    TrailingStopStep: N[Decimal]
-
-    def has_order_id(self, order_id):
-        return True if self.OrderId == order_id else False
-
-
-class PortOrdersResPaged(SaxobankPagedResponseMoel):
-    Data: list[PortOrdersRes]
-
-    def find_by_order_id(self, order_id):
-        for order in self.Data:
-            if order.has_order_id(order_id):
-                return order
-        return None
-
-
-class PortClientsMeRes(c.SaxobankModel):
-    ClientId: str
-    ClientKey: c.ClientKey
-    DefaultAccountId: str
-    DefaultAccountKey: c.AccountKey
-    PositionNettingMode: e.ClientPositionNettingMode
-    PositionNettingProfile: e.ClientPositionNettingProfile
 
 
 class PositionsMeResponse(c.SaxobankModel):
@@ -180,11 +100,11 @@ class PositionsMeResponse(c.SaxobankModel):
 #  r1 = m.PositionsMeResponsePaged.parse_obj(no1)
 #  r2 = m.PositionsMeResponsePaged.parse_obj(no2)
 #  r1.Data.extend(r2.Data)
-class PositionsMeResponsePaged(SaxobankPagedResponseMoel):
-    Data: list[PositionsMeResponse]
+# class PositionsMeResponsePaged(c.SaxobankPagedResponseMoel):
+#     Data: list[PositionsMeResponse]
 
-    def find_order_id(self, order_id) -> Iterable[PositionsMeResponse]:
-        return filter(lambda x: x.has_order_id(order_id), self.Data or [])
+#     def find_order_id(self, order_id) -> Iterable[PositionsMeResponse]:
+#         return filter(lambda x: x.has_order_id(order_id), self.Data or [])
 
-    def filter_instrument(self, asset_type, uic) -> Iterable[PositionsMeResponse]:
-        return filter(lambda x: x.has_instrument(asset_type, uic), self.Data or [])
+#     def filter_instrument(self, asset_type, uic) -> Iterable[PositionsMeResponse]:
+#         return filter(lambda x: x.has_instrument(asset_type, uic), self.Data or [])

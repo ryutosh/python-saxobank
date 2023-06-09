@@ -18,21 +18,21 @@ class WsBaseUrl(str, Enum):
 
 
 @dataclass(frozen=True)
-class SaxobankEnvironmentDefinition:
+class SaxobankEnvironment:
     auth_base_url: AuthBaseUrl
     rest_base_url: RestBaseUrl
     ws_base_url: WsBaseUrl
 
 
-# LIVE = SaxobankEnvironment(auth_base_url=AuthBaseUrl.LIVE, rest_base_url=RestBaseUrl.LIVE, ws_base_url=WsBaseUrl.LIVE)
-# SIM = SaxobankEnvironment(auth_base_url=AuthBaseUrl.SIM, rest_base_url=RestBaseUrl.SIM, ws_base_url=WsBaseUrl.SIM)
+LIVE = SaxobankEnvironment(AuthBaseUrl.LIVE, RestBaseUrl.LIVE, WsBaseUrl.LIVE)
+SIM = SaxobankEnvironment(AuthBaseUrl.SIM, RestBaseUrl.SIM, WsBaseUrl.SIM)
 
 
-class SaxobankEnvironment(SaxobankEnvironmentDefinition, Enum):
-    LIVE = (AuthBaseUrl.LIVE, RestBaseUrl.LIVE, WsBaseUrl.LIVE)
-    SIM = (AuthBaseUrl.SIM, RestBaseUrl.SIM, WsBaseUrl.SIM)
+# class SaxobankEnvironment(SaxobankEnvironmentDefinition, Enum):
+#     LIVE = (AuthBaseUrl.LIVE, RestBaseUrl.LIVE, WsBaseUrl.LIVE)
+#     SIM = (AuthBaseUrl.SIM, RestBaseUrl.SIM, WsBaseUrl.SIM)
 
-    # LIVE = SaxobankEnvironmentDefinition(
-    #     auth_base_url=AuthBaseUrl.LIVE, rest_base_url=RestBaseUrl.LIVE, ws_base_url=WsBaseUrl.LIVE
-    # )
-    # SIM = SaxobankEnvironmentDefinition(auth_base_url=AuthBaseUrl.SIM, rest_base_url=RestBaseUrl.SIM, ws_base_url=WsBaseUrl.SIM)
+#     # LIVE = SaxobankEnvironmentDefinition(
+#     #     auth_base_url=AuthBaseUrl.LIVE, rest_base_url=RestBaseUrl.LIVE, ws_base_url=WsBaseUrl.LIVE
+#     # )
+#     # SIM = SaxobankEnvironmentDefinition(auth_base_url=AuthBaseUrl.SIM, rest_base_url=RestBaseUrl.SIM, ws_base_url=WsBaseUrl.SIM)

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import abc
 
-from . import model
-from .endpoint import Endpoint
+from . import endpoint, model
 from .model.common import ContextId, ReferenceId, SaxobankModel
 from .user_session import UserSession
 
@@ -55,19 +54,20 @@ async def __aexit(self: BaseSubscription, exc_type, exc_value, traceback):
 
 
 class PortClosedPositions(BaseSubscription):
-    __endpoint_create = Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION
-    __endpoint_remove = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION
+    __endpoint_create = endpoint.port.closed_positions.POST_SUBSCRIPTION
+    __endpoint_remove = endpoint.port.closed_positions.DELETE_SUBSCRIPTION
 
+    global __create_with_top, __remove
     create = __create_with_top
     __aenter__ = create
     remove = __remove
     __aexit__ = __aexit
 
     async def change_page_size(self, new_page_size: int, access_token: str | None = None):
-        req = Endpoint.PORT_PATCH_CLOSEDPOSITIONS_SUBSCRIPTION.RequestModel(
+        req = endpoint.port.closed_positions.PATCH_SUBSCRIPTION.request_model(
             ContextId=self.context_id, ReferenceId=self.reference_id, NewPageSize=new_page_size
         ).dict(exclude_unset=True, exclude_none=True)
 
         return await self.session.openapi_request(
-            Endpoint.PORT_PATCH_CLOSEDPOSITIONS_SUBSCRIPTION, req, acess_token=access_token
+            endpoint.port.closed_positions.PATCH_SUBSCRIPTION, req, access_token=access_token
         )
