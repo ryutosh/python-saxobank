@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from decimal import Decimal
+
 # from datetime import datetime
 from typing import Any
 from typing import Optional as N
 
 from pydantic import conint
 
-from . import enums as e
-from .common import SaxobankModel
+from .. import enum as e
+from ..common import ODataRequest, ODataResponse, SaxobankModel
 
 
 # ****************************************************************
@@ -53,21 +54,23 @@ class TickSizeSchemeResponse(SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class InstrumentsDetailsRequest(SaxobankModel):
+class InstrumentsDetailsRequest(SaxobankModel, ODataRequest):
+    AssetTypes: N[list[e.AssetType]]
+    Uics: N[list[int]]
     FieldGroups: N[list[e.InstrumentFieldGroup]]
 
-    class Config:
-        use_enum_values = True
+    # class Config:
+    #     use_enum_values = True
 
 
 # ****************************************************************
 # Response Main Models
 # ****************************************************************
-class InstrumentsDetailsResponse(SaxobankModel):
+class InstrumentsDetails(SaxobankModel):
     # ErrorInfo
-    ErrorCode: N[str]
-    Message: N[str]
-    ModelState: N[Any]
+    # ErrorCode: N[str]
+    # Message: N[str]
+    # ModelState: N[Any]
 
     # Display, Format and Defaults
     AssetType: N[e.AssetType]
@@ -96,3 +99,7 @@ class InstrumentsDetailsResponse(SaxobankModel):
     TickSize: N[Decimal]
     TickSizeLimitOrder: N[Decimal]
     TickSizeStopOrder: N[Decimal]
+
+
+class InstrumentsDetailsResponse(SaxobankModel, ODataResponse):
+    Data: list[InstrumentsDetails]

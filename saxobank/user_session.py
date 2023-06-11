@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from datetime import datetime
-from functools import partialmethod
-from typing import Optional
+from functools import partial
+
+# from functools import partialmethod
+from typing import Any, Optional, Tuple
 from urllib.parse import urljoin
 
 import aiohttp
+import pydantic
 
 from . import endpoint, exception
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
-from .model.common import SaxobankModel
+from .model.common import ErrorResponse, ODataResponse, ResponseCode, SaxobankModel
+from .service_group import _Portfolio, _Reference, _Root
 
 
 class RateLimiter:
@@ -21,6 +26,15 @@ class RateLimiter:
 
 
 class UserSession:
+    # _http_responses_exceptions: Final[dict] = {
+    #     401: exception.RequestUnauthorizedError,
+    #     403: exception.RequestForbiddenError,
+    #     404: exception.RequestNotFoundError,
+    #     429: exception.TooManyRequestsError,
+    #     500: exception.SaxobankServiceError,
+    #     503: exception.SaxobankServiceUnavailableError,
+    # }
+
     def __init__(
         self,
         rest_base_url: RestBaseUrl,
@@ -33,53 +47,81 @@ class UserSession:
         self.limiter = rate_limiter
         self.token = access_token
 
+        self.port = _Portfolio(self)
+        self.ref = _Reference(self)
+        self.root = _Root(self)
+
     async def openapi_request(
         self,
         endpoint: endpoint.Endpoint,
         request_model: SaxobankModel | None = None,
         effectual_until: datetime | None = None,
         access_token: str | None = None,
-    ):
+    ) -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         url = urljoin(self.base_url, endpoint.url(request_model.path_items() if request_model else None))
-        req_data = request_model.dict(exclude_unset=True) if request_model else None
-        params = req_data if endpoint.method == HttpMethod.GET else None
-        data = req_data if endpoint.method != HttpMethod.GET else None
+        params = request_model.dict_lower_case() if request_model and endpoint.method == HttpMethod.GET else None
+        data = request_model.dict() if request_model and endpoint.method != HttpMethod.GET else None
+
+        # req_data = request_model.dict(exclude_unset=True, by_alias=True) if request_model else None
+        # params = req_data if endpoint.method == HttpMethod.GET else None
+        # data = req_data if endpoint.method != HttpMethod.GET else None
 
         await self.limiter.throttle(endpoint.dimension, endpoint.is_order, effectual_until)
 
         try:
-            response = await self.http.request(
+            async with self.http.request(
                 endpoint.method,
                 url,
                 params=params,
                 data=data if endpoint.content_type != ContentType.JSON else None,
                 json=data if endpoint.content_type == ContentType.JSON else None,
                 headers={"Authorization": f"Bearer {access_token if access_token else self.token}"},
-            )
+                raise_for_status=False,
+            ) as response:
+                info = response.request_info
+                code = ResponseCode(response.status)
+                json = await response.json() if response.content_type == ContentType.JSON else None
+
+            if error_response := self.error_response(code, json):
+                return code, error_response, None
+
+            response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
+            is_odata, next_callback = self.is_odata_response(response_model)
+
+            return code, response_model.Data if is_odata else response_model, next_callback
 
         except aiohttp.ClientResponseError as ex:
-            raise exception.ResponseError(ex.request_info, ex.status, ex.headers)
+            raise exception.ResponseError(ex.status, ex.message)
 
-        except aiohttp.ClientError as ex:
-            raise exception.RequestError(ex)
+        except aiohttp.InvalidURL as ex:
+            raise exception.InternalError(f"Invalid URL: {ex.url}")
 
-        else:
-            async with response:
-                status = response.status
-                headers = response.headers
-                body = await response.json() if response.content_type == ContentType.JSON else None
-                request_info = response.request_info
+        except (aiohttp.ClientConnectionError, aiohttp.ClientPayloadError) as ex:
+            raise exception.HttpClientError(str(ex))
 
-        if 401 <= status:
-            raise exception.ResponseError(request_info, status, headers)
+        except pydantic.ValidationError as ex:
+            print(str(info))
+            raise exception.InternalError(str(ex) + f"\r\nResponce was: {json}")
 
-        return status, headers, endpoint.response_model.parse_obj(body) if endpoint.response_model else body
+    @classmethod
+    def error_response(cls, code: ResponseCode, json: Optional[Any] = None) -> Optional[ErrorResponse]:
+        if code != ResponseCode.BAD_REQUEST or not json:
+            return None
 
-    # Porfolio Service Group
-    port_get_clients_me = partialmethod(openapi_request, endpoint.port.clients.GET_ME)
-    port_get_positions_positionid = partialmethod(openapi_request, endpoint.port.positions.GET_POSITION_ID)
-    port_post_closedpositions_subscription = partialmethod(openapi_request, endpoint.port.closed_positions.POST_SUBSCRIPTION)
-    port_patch_closedpositions_subscription = partialmethod(openapi_request, endpoint.port.closed_positions.PATCH_SUBSCRIPTION)
-    port_delete_closedpositions_subscription = partialmethod(
-        openapi_request, endpoint.port.closed_positions.DELETE_SUBSCRIPTION
-    )
+        try:
+            return ErrorResponse.parse_obj(json)
+        except pydantic.ValidationError:
+            return None
+
+    def is_odata_response(self, response_model: Optional[SaxobankModel]) -> Tuple[bool, Optional[Coroutine]]:
+        if not isinstance(response_model, ODataResponse):
+            return False, None
+
+        if not (next := response_model.next_request):
+            return True, None
+
+        if not (next_endpoint := endpoint.Endpoint.match(next.path)):
+            raise exception.InternalError(f"Next endpoint for {next.path} not found.")
+
+        next_request_model = next_endpoint.request_model.parse_obj(next.query)
+        return True, partial(self.openapi_request, next_endpoint, next_request_model)

@@ -3,7 +3,17 @@ from enum import Enum
 
 # TODO: Not full covered
 class AssetType(str, Enum):
+    Bond = "Bond"
+    FxSpot = "FxSpot"
+    FxBinaryOption = "FxBinaryOption"
+    FxForwards = "FxForwards"
+    FxKnockInOption = "FxKnockInOption"
+    FxKnockOutOption = "FxKnockOutOption"
+    FxNoTouchOption = "FxNoTouchOption"
+    FxOneTouchOption = "FxOneTouchOption"
+    FxSwap = "FxSwap"
     CfdOnIndex = "CfdOnIndex"
+    Stock = "Stock"
 
 
 class AuthenticationLevel(str, Enum):

@@ -8,6 +8,7 @@ from aiohttp import ClientSession
 
 from .environment import LIVE, SIM, SaxobankEnvironment
 from .model.common import ContextId
+from .service_group import _Portfolio, _Reference, _Root
 
 # from .streaming_session import StreamingSession
 from .user_session import RateLimiter, UserSession
@@ -46,37 +47,40 @@ class SessionFacade:
 
     def __init__(self, user_session: UserSession) -> None:
         self.__user_session = user_session
-        self.port = self.__Portfolio(
-            self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        )
-        self.port.clients = self.port.Clients(
-            self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        )
-        self.port.positions = self.port.Positions(
-            self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        )
-        self.port.closed_positions = self.port.ClosedPositions(
-            self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        )
+        # self.port = self.__Portfolio(
+        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
+        # )
+        # self.port.clients = self.port.Clients(
+        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
+        # )
+        # self.port.positions = self.port.Positions(
+        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
+        # )
+        # self.port.closed_positions = self.port.ClosedPositions(
+        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
+        # )
+        self.port = _Portfolio(self.__user_session)
+        self.ref = _Reference(self.__user_session)
+        self.root = _Root(self.__user_session)
 
     def create_streaming(self, context_id: Optional[ContextId] = None) -> StreamingSession:
         return None
         # streaming_session = StreamingSession(self.__user_session, self.__user_session.http, context_id)
         # return streaming_session
 
-    class __Portfolio:
-        __init__ = UserSession.__init__
+    # class __Portfolio:
+    #     __init__ = UserSession.__init__
 
-        class Clients:
-            __init__ = UserSession.__init__
-            get_me = UserSession.port_get_clients_me
+    #     class Clients:
+    #         __init__ = UserSession.__init__
+    #         get_me = UserSession.port_get_clients_me
 
-        class Positions:
-            __init__ = UserSession.__init__
-            get_positionid = UserSession.port_get_positions_positionid
+    #     class Positions:
+    #         __init__ = UserSession.__init__
+    #         get_positionid = UserSession.port_get_positions_positionid
 
-        class ClosedPositions:
-            __init__ = UserSession.__init__
-            post_subscription = UserSession.port_post_closedpositions_subscription
-            patch_subscription = UserSession.port_patch_closedpositions_subscription
-            delete_subscription = UserSession.port_delete_closedpositions_subscription
+    #     class ClosedPositions:
+    #         __init__ = UserSession.__init__
+    #         post_subscription = UserSession.port_post_closedpositions_subscription
+    #         patch_subscription = UserSession.port_patch_closedpositions_subscription
+    #         delete_subscription = UserSession.port_delete_closedpositions_subscription

@@ -29,10 +29,10 @@ class DisplayAndFormatResponse(SaxobankModel):
     Symbol: str
 
 
-class ErrorInfo(SaxobankModel):
-    ErrorCode: str
-    Message: str
-    ModelState: N[Any]
+# class ErrorInfo(SaxobankModel):
+#     ErrorCode: str
+#     Message: str
+#     ModelState: N[Any]
 
 
 class InstrumentPriceDetailsResponse(SaxobankModel):
@@ -143,10 +143,10 @@ class ErrorResponse(SaxobankModel):
     ErrorInfo: ErrorInfo
 
 
-class InfoPricesErrorResponse(SaxobankModel):
-    ErrorCode: str
-    Message: str
-    ModelState: N[Any]
+# class InfoPricesErrorResponse(SaxobankModel):
+#     ErrorCode: str
+#     Message: str
+#     ModelState: N[Any]
 
 
 class InfoPricesResponse(SaxobankModel):

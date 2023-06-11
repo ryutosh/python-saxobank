@@ -1,7 +1,7 @@
 # from datetime import datetime
 from __future__ import annotations
 
-from collections.abc import Iterable
+# from collections.abc import Iterable
 from decimal import Decimal
 
 # from typing import List
@@ -73,26 +73,30 @@ class PositionsPositionIdReq(c.SaxobankModel):
         use_enum_values = True
 
 
-class PositionsMeRequest(c.SaxobankPagedRequestMoel):
+class MeReq(c.SaxobankModel, c.ODataRequest):
     FieldGroups: N[list[e.PositionFieldGroup]]
     PriceMode: N[e.PriceMode]
 
-    class Config:
-        use_enum_values = True
 
-
-class PositionsMeResponse(c.SaxobankModel):
+# ****************************************************************
+# Response Main Models
+# ****************************************************************
+class PositionsRes(c.SaxobankModel):
     NetPositionId: N[str]
     PositionId: N[str]
     PositionBase: N[PositionStatic]
     PositionView: N[PositionDynamic]
 
-    def has_order_id(self, order_id) -> bool | None:
-        return None if not self.PositionBase else True if self.PositionBase.SourceOrderId == order_id else False
 
-    def has_instrument(self, asset_type, uic) -> bool | None:
-        base = self.PositionBase
-        return None if not base else True if base.AssetType == asset_type and base.Uic == uic else False
+class MeRes(c.SaxobankModel, c.ODataResponse):
+    Data: list[PositionsRes]
+
+    # def has_order_id(self, order_id) -> bool | None:
+    #     return None if not self.PositionBase else True if self.PositionBase.SourceOrderId == order_id else False
+
+    # def has_instrument(self, asset_type, uic) -> bool | None:
+    #     base = self.PositionBase
+    #     return None if not base else True if base.AssetType == asset_type and base.Uic == uic else False
 
 
 # Retrive each paged response.
