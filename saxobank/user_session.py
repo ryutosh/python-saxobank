@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from collections import namedtuple
 from collections.abc import Coroutine
 from datetime import datetime
 from functools import partial
-
-# from functools import partialmethod
 from typing import Any, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -16,6 +15,8 @@ from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
 from .model.common import ErrorResponse, ODataResponse, ResponseCode, SaxobankModel
 from .service_group import _Portfolio, _Reference, _Root
+
+# from functools import partialmethod
 
 
 class RateLimiter:
@@ -34,6 +35,7 @@ class UserSession:
     #     500: exception.SaxobankServiceError,
     #     503: exception.SaxobankServiceUnavailableError,
     # }
+    _OpenApiRequestResponse = namedtuple("_OpenApiRequestResponse", ["code", "model", "next_request"])
 
     def __init__(
         self,
@@ -83,12 +85,12 @@ class UserSession:
                 json = await response.json() if response.content_type == ContentType.JSON else None
 
             if error_response := self.error_response(code, json):
-                return code, error_response, None
+                return self._OpenApiRequestResponse(code, error_response, None)
 
             response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
             is_odata, next_callback = self.is_odata_response(response_model)
 
-            return code, response_model.Data if is_odata else response_model, next_callback
+            return self._OpenApiRequestResponse(code, response_model.Data if is_odata else response_model, next_callback)
 
         except aiohttp.ClientResponseError as ex:
             raise exception.ResponseError(ex.status, ex.message)

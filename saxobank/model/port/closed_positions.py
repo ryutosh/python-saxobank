@@ -1,14 +1,16 @@
 # from datetime import datetime
 from __future__ import annotations
 
-from collections.abc import Iterable
-
-# from decimal import Decimal
 from typing import List
 from typing import Optional as N
 
+from pydantic import Field
+
 from .. import common as c
 from .. import enum as e
+
+# from collections.abc import Iterable
+# from decimal import Decimal
 
 
 class ClosedPositionReq(c.SaxobankModel, c.ODataRequest):
@@ -22,6 +24,15 @@ class ClosedPositionRes(c.SaxobankModel, c.ODataResponse):
 # Not fully covered
 class ClosedPosition(c.SaxobankModel):
     AssetType: e.AssetType
+
+
+class ClosedPositionRequest(c.SaxobankModel):
+    ClientKey: c.ClientKey
+
+
+class PostSubscriptionReq(c.CreateSubscriptionRequest):
+    top: N[int] = Field(alias="$top")
+    Arguments: N[ClosedPositionRequest]
 
 
 # Not fully covered
@@ -38,12 +49,12 @@ class ClosedPositionResponse(c.SaxobankModel):
             return False
 
 
-# class ListResultClosedPositionResponse(c.ListResultModel):
-#     Data: List[ClosedPositionResponse]
+class ListResultClosedPositionResponse(c.SaxobankModel, c.ODataResponse):
+    Data: List[ClosedPositionResponse]
 
 
-# class ClosedpositionsSubscriptionRes(c.SubscriptionsResModel):
-#     Snapshot: ListResultClosedPositionResponse
+class PostSubscriptionRes(c.SubscriptionsResModel):
+    Snapshot: ListResultClosedPositionResponse
 
 
 # Retrive each paged response.

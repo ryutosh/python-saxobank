@@ -12,30 +12,32 @@ However the library stays thin, but also provides common functions like ticker s
 because these are common business.
 
 
-```python
-import saxobank
-from saxobank.dto import AssetType, OrderAmountType, req
-
-environment = {
-    'mode': 'SIM',
-    'grant_type': 'code'
-    'application_key': 'XXXX',
-    'application_secret': 'YYYY'
-}
-```
 # When you control authorization yourself
 ```python
-# Create application
-saxo = saxobank.Application(environment)
+from saxobank.application import Application
+from saxobank.environment import SaxobankEnvironment
+from saxobank.model.common import AssetType
+from saxobank import model
 
-# User Sesion
-session = saxo.create_session()
+# Setup application countering to Saxo OpenAPI simulation environment
+saxo = Application(SaxobankEnvironment.SIM)
 
-# Send request
-req_orders = models.trade.OrdersReq(Amount=10.0, AmountType=models.OrderAmountType.CurrencyAmount)
-res_orders = await session.trade_post_orders(req_orders, access_token='xxxx')
+# Create sesion instance to requests OpenAPI
+session = saxo.create_session(access_token=your_access_token)
+
+# Get Microsoft stock price
+req = model.chart.charts.Get(AssetType=AssetType.Stock, Uic=4912, Horizon=480)
+res = await session.chart.charts.get(req)
+print(res.model.Data)
+
+# Create streaming for realtime trade
+streaming = session.create_streaming()
+streaming.service(loop=, on_disconnect=lambda x: alart(x))
 
 # Subscribe
+async def buy():
+    pass
+
 async def your_strategy(streaming):
     req_chart_short = models.trade.ChartSubscriptionReq(AssetType=models.AssetType.FxSwap, Uic=99, Resolution=60)
     req_chart_long = req_chart_short.replace(Resolution=60*60*24)
@@ -43,35 +45,28 @@ async def your_strategy(streaming):
     reference_id_short = ReferenceId()
     reference_id_long = ReferenceId()
 
-    res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1", access_token='xxxx')
-    res_long = await streaming.chart_subscription(reference_id=reference_id_long, arguments=req_chart_long, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+    stream_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1", access_token='xxxx')
+    stream_long = await streaming.chart_subscription(reference_id=reference_id_long, arguments=req_chart_long, format=models.Format.Json, refresh_rate=1, tag="strategy1")
 
-    async with streaming.streamer(reference_id=reference_id_short) as stream_short, streaming.streamer(reference_id=reference_id_long) as stream_long:
-        while True:
-            try:
-                snapshot_short = await stream_short.pop()
-                snapshot_long = await stream_long.pop()
+    while True:
+        try:
+            snapshot_short = await stream_short.pop()
+            snapshot_long = await stream_long.pop()
 
-            except ResetSubscriptionException as ex:
-                await streaming.chart_remove_subscription(reference_id=reference_id_short)
-                reference_id_short = ReferenceId()
-                res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
+        except ResetSubscriptionException as ex:
+            await streaming.chart_remove_subscription(reference_id=reference_id_short)
+            reference_id_short = ReferenceId()
+            res_short = await streaming.chart_subscription(reference_id=reference_id_short, arguments=req_chart_short, format=models.Format.Json, refresh_rate=1, tag="strategy1")
 
-            except PermanentlyDisabled as ex:
-                break
+        except PermanentlyDisabled as ex:
+            break
 
-            except DisconnectedException as ex:
-                alert()
-                if not streaming.reconnected:
-                    streaming.reconnect()
+        except DisconnectedException as ex:
+            alert()
+            if not streaming.reconnected:
+                streaming.reconnect()
 
-
-# Run streaming service
-streaming = session.create_streaming()
-service = asyncio.create_task(streaming.service(access_token='xxxx', on_disconnect=lambda x: alart(x)))
-
-
-
+# Run 
 asyncio.run(your_strategy(queue))
 
 

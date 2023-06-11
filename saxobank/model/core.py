@@ -6,23 +6,23 @@ from . import common
 from .common import ContextId, HeartbeatReason, ReferenceId, SaxobankModel
 
 
-class StreamingwsHeartbeatSubscriptionRes(SaxobankModel):
-    OriginatingReferenceId: ReferenceId
-    Reason: HeartbeatReason
+# class StreamingwsHeartbeatSubscriptionRes(SaxobankModel):
+#     OriginatingReferenceId: ReferenceId
+#     Reason: HeartbeatReason
 
 
-class StreamingwsHeartbeatRes(SaxobankModel):
-    ReferenceId: Literal["_heartbeat"]
-    Heartbeats: StreamingwsHeartbeatSubscriptionRes
+# class StreamingwsHeartbeatRes(SaxobankModel):
+#     ReferenceId: Literal["_heartbeat"]
+#     Heartbeats: StreamingwsHeartbeatSubscriptionRes
 
 
-class StreamingwsDisconnectRes(SaxobankModel):
-    ReferenceId: Literal["_disconnect"]
+# class StreamingwsDisconnectRes(SaxobankModel):
+#     ReferenceId: Literal["_disconnect"]
 
 
-class StreamingwsResetSubscriptionsRes(SaxobankModel):
-    ReferenceId: Literal["_resetsubscriptions"]
-    TargetReferenceIds: List[common.ReferenceId]
+# class StreamingwsResetSubscriptionsRes(SaxobankModel):
+#     ReferenceId: Literal["_resetsubscriptions"]
+#     TargetReferenceIds: List[common.ReferenceId]
 
 
 class RequestCreateSubscription(SaxobankModel):

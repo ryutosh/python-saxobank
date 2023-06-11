@@ -99,7 +99,12 @@ class __Portfolio:
         GET = Endpoint("port/v1/closedpositions", HttpMethod.GET, response_model=port_closed_positions.ClosedPositionRes)
         DELETE_SUBSCRIPTION = Endpoint("port/v1/closedpositions/subscriptions/{ContextId}/{ReferenceId}", HttpMethod.DELETE)
         PATCH_SUBSCRIPTION = Endpoint("port/v1/closedpositions/subscriptions/{ContextId}/{ReferenceId}", HttpMethod.PATCH)
-        POST_SUBSCRIPTION = Endpoint("port/v1/closedpositions/subscriptions", HttpMethod.POST)
+        POST_SUBSCRIPTION = Endpoint(
+            "port/v1/closedpositions/subscriptions",
+            HttpMethod.POST,
+            request_model=port_closed_positions.PostSubscriptionReq,
+            response_model=port_closed_positions.PostSubscriptionRes,
+        )
 
     class __Positions:
         GET_ME = Endpoint(

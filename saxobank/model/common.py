@@ -185,7 +185,7 @@ class SubscriptionsResModel(SaxobankModel):
     InactivityTimeout: int
     ReferenceId: ReferenceId
     RefreshRate: int
-    Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
+    # Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
     State: str
     Tag: str
 
@@ -206,17 +206,13 @@ class InlineCountValue(Enum):
     NONE = "None"  # The results will not contain an inline count.
 
 
-# class CreateSubscriptionRequest(SaxobankModel):
-#     ContextId: str
-#     ReferenceId: str
-#     Format: str
-#     Arguments: Any
-#     ReplaceReferenceId: Optional[str]
-
-
-class SaxobankPagedRequestMoel(SaxobankModel):
-    top: int = Field(None, alias="$top")
-    skip: int = Field(None, alias="$skip")
+class CreateSubscriptionRequest(SaxobankModel):
+    ContextId: ContextId
+    ReferenceId: ReferenceId
+    ReplaceReferenceId: Optional[ReferenceId]
+    Format: Optional[str]
+    RefreshRate: Optional[int]
+    Tag: Optional[str]
 
 
 class OrderDuration(SaxobankModel):

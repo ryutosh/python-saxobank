@@ -8,24 +8,20 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any, Literal, Optional
+from urllib.parse import urljoin
 
 import aiohttp
 
-from . import exception
-
 # from api_call import Dispatcher
-from .endpoint import Endpoint
+from . import endpoint, exception
 from .environment import WsBaseUrl
 from .model.common import ContextId, ReferenceId, SaxobankModel
+from .model.core import StreamingwsAuthorizeReq  # DefinedReferenceId,
 from .model.core import (
-    # DefinedReferenceId,
-    StreamingwsAuthorizeReq,
     StreamingwsConnectReq,
-    StreamingwsDisconnectRes,
-    StreamingwsHeartbeatRes,
-    StreamingwsResetSubscriptionsRes,
-)
-from .subscription import PortClosedPositions
+)  # StreamingwsDisconnectRes,; StreamingwsHeartbeatRes,; StreamingwsResetSubscriptionsRes,
+
+# from .subscription import PortClosedPositions
 from .user_session import UserSession
 
 # from subscription import BaseSubscription
@@ -66,30 +62,30 @@ class DataMessage:
     def __parse_str(cls, bytes: bytes, index: int, size: int) -> str:
         return bytes[index : index + size].decode(cls.__ENCODING_ASCII, cls.__DECODE_ERROR)
 
-    @lru_cache
     @property
+    @lru_cache
     def __payload_size(self):
         return self.__parse_int(
             self.message, self.__LAYOUT_PAYLOAD_SIZE.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_SIZE.SIZE
         )
 
-    @lru_cache
     @property
+    @lru_cache
     def __reference_id_size(self):
         return self.__parse_int(self.message, self.__LAYOUT_REF_ID_SIZE.INDEX, self.__LAYOUT_REF_ID_SIZE.SIZE)
 
-    @lru_cache
     @property
+    @lru_cache
     def is_control(self):
         return bool(self.reference_id[0] == "_")
 
-    @lru_cache
     @property
+    @lru_cache
     def message_id(self):
         return self.__parse_int(self.message, self.__LAYOUT_MESSAGE_ID.INDEX, self.__LAYOUT_MESSAGE_ID.SIZE)
 
-    @lru_cache
     @property
+    @lru_cache
     def payload(self):
         return (
             self.__parse_json(self.message, self.__LAYOUT_PAYLOAD.INDEX + self.__payload_size, self.__LAYOUT_PAYLOAD.SIZE)
@@ -97,15 +93,15 @@ class DataMessage:
             else None
         )
 
-    @lru_cache
     @property
+    @lru_cache
     def payload_fmt(self):
         return self.__parse_int(
             self.message, self.__LAYOUT_PAYLOAD_FORMAT.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_FORMAT.SIZE
         )
 
-    @lru_cache
     @property
+    @lru_cache
     def reference_id(self):
         return self.__parse_str(self.message, self.__LAYOUT_REF_ID.INDEX, self.__LAYOUT_REF_ID.SIZE + self.__reference_id_size)
 
@@ -145,12 +141,14 @@ class StreamingSession:
 
     def __init__(
         self,
+        ws_base_url: WsBaseUrl,
         user_session: UserSession,
         ws_client: aiohttp.ClientSession,
         context_id: ContextId,
         access_token: Optional[str] = None,
         message_id: Optional[int] = None,
     ) -> None:
+        self.base_url = ws_base_url
         self.user_session = user_session
         self.ws_client = ws_client
         self.context_id = context_id
@@ -160,9 +158,10 @@ class StreamingSession:
         self.streaming: Optional[Streaming] = None
 
     async def connect(self, access_token: Optional[str] = None) -> Streaming:
+        url = urljoin(self.base_url, self.WS_CONNECT_URL)
         params = StreamingwsConnectReq(contextid=self.context_id, messageid=self.message_id).dict()
-        ws_stream = await self.ws_client.ws_connect(self.WS_CONNECT_URL, params=params)
-        return Streaming(ws_stream, self.streamers)
+
+        return Streaming(await self.ws_client.ws_connect(url, params=params), self.streamers)
 
     # __aenter__ = connect
 
@@ -195,28 +194,37 @@ class StreamingSession:
         _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
 
     # async def __create_subscription(self, reference_id: ReferenceId, arguments: SaxobankModel)
-    async def closedpositions_subscription(self, reference_id: ReferenceId, arguments, format, refresh_rate) -> SaxobankModel:
+    async def closedpositions_subscription(self, reference_id: ReferenceId, arguments, format, refresh_rate):
         assert self.streaming
-        req = Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION.RequestModel(
+
+        req = endpoint.port.closed_positions.POST_SUBSCRIPTION.request_model(
             ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
-        ).dict(exclude_unset=True, exclude_none=True)
-
-        res = await self.session.openapi_request(
-            self.Endpoint.PORT_POST_CLOSEDPOSITIONS_SUBSCRIPTION, req, acess_token=access_token
         )
 
-        # template add snapshot and timeout
-        if hasattr(res, "Snapshot"):
-            self.streamers[reference_id].set_snapshot(res.Snapshot)
+        res = await self.user_session.port.closed_positions.post_subscription(req)
 
-    async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:
-        req = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, RequestModel(
-            ContextId=self.context_id, Arguments=arguments
-        ).dict(exclude_unset=True, exclude_none=True)
+        streamer = self.streamers[reference_id]
 
-        return await self.session.openapi_request(
-            self.Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, req, acess_token=access_token
-        )
+        if hasattr(res.response_model, "InactivityTimeout"):
+            streamer.set_timeout(res.response_model.Snapshot)
+
+        is_odata, next_callback = self.user_session.is_odata_response(res.response_model)
+        if is_odata:
+            streamer.set_snapshot(res.response_model.Snapshot.Data)
+
+        else:
+            streamer.set_snapshot(res.response_model.Snapshot)
+
+        return streamer, next_callback if is_odata else None
+
+    # async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:
+    #     req = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, RequestModel(
+    #         ContextId=self.context_id, Arguments=arguments
+    #     ).dict(exclude_unset=True, exclude_none=True)
+
+    #     return await self.session.openapi_request(
+    #         self.Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, req, acess_token=access_token
+    #     )
 
     def streamer(self, reference_id: ReferenceId, snapshot: SaxobankModel, timeout: int):
         streamer = self.streamers[reference_id]

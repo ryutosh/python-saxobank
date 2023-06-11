@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from datetime import datetime
 from functools import partialmethod
+from typing import Optional, Tuple
 
 from . import endpoint
 from .model.common import SaxobankModel
@@ -19,7 +21,7 @@ class _ServiceGroup:
         request_model: SaxobankModel | None = None,
         effectual_until: datetime | None = None,
         access_token: str | None = None,
-    ):
+    ) -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         return self._user_session.openapi_request(endpoint, request_model, effectual_until, access_token)
 
 
