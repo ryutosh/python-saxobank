@@ -15,11 +15,8 @@ import aiohttp
 # from api_call import Dispatcher
 from . import endpoint, exception
 from .environment import WsBaseUrl
+from .model import streaming as model_streaming
 from .model.common import ContextId, ReferenceId, SaxobankModel
-from .model.core import StreamingwsAuthorizeReq  # DefinedReferenceId,
-from .model.core import (
-    StreamingwsConnectReq,
-)  # StreamingwsDisconnectRes,; StreamingwsHeartbeatRes,; StreamingwsResetSubscriptionsRes,
 
 # from .subscription import PortClosedPositions
 from .user_session import UserSession
@@ -131,77 +128,93 @@ class Streaming:
     async def close(self) -> bool:
         return await self.ws_resp.close()
 
+    async def pop(self, reference_id: ReferenceId):
+        return await self.streamers[reference_id].get()
+
     async def receive(self) -> DataMessage:
         return DataMessage(await self.ws_resp.receive_bytes())
 
 
 class StreamingSession:
-    WS_AUTHORIZE_URL: str = "authorize"
-    WS_CONNECT_URL: str = "connect"
+    WS_AUTHORIZE_PATH: str = "authorize"
+    WS_CONNECT_PATH: str = "connect"
 
     def __init__(
         self,
         ws_base_url: WsBaseUrl,
         user_session: UserSession,
         ws_client: aiohttp.ClientSession,
-        context_id: ContextId,
+        context_id: Optional[ContextId] = None,
         access_token: Optional[str] = None,
-        message_id: Optional[int] = None,
     ) -> None:
-        self.base_url = ws_base_url
+        self.auth_url = urljoin(ws_base_url, self.WS_AUTHORIZE_PATH)
+        self.connect_url = urljoin(ws_base_url, self.WS_CONNECT_PATH)
         self.user_session = user_session
         self.ws_client = ws_client
-        self.context_id = context_id
+        self.context_id = context_id if context_id else ContextId()
         self.access_token = access_token
-        self.message_id = message_id
         self.streamers = Streamers(self.context_id)
         self.streaming: Optional[Streaming] = None
 
-    async def connect(self, access_token: Optional[str] = None) -> Streaming:
-        url = urljoin(self.base_url, self.WS_CONNECT_URL)
-        params = StreamingwsConnectReq(contextid=self.context_id, messageid=self.message_id).dict()
+    async def connect(self, message_id: Optional[int] = None, access_token: Optional[str] = None) -> Streaming:
+        if not self.streaming:
+            params = model_streaming.ReqConnect(contextid=self.context_id, messageid=message_id).as_request()
+            self.streaming = Streaming(await self.ws_client.ws_connect(self.connect_url, params=params), self.streamers)
 
-        return Streaming(await self.ws_client.ws_connect(url, params=params), self.streamers)
+        return self.streaming
 
     # __aenter__ = connect
 
     async def disconnect(self) -> bool:
-        assert self.streaming
-        return await self.streaming.close()
+        if not self.streaming:
+            return False
+
+        ret = await self.streaming.close()
+        self.streaming = None
+        return ret
 
     # async def __aexit__(self, exc_type, exc_value, traceback):
     #     self.disconnect(self)
 
-    async def service(self) -> None:
-        try:
-            self.streaming = await self.connect(access_token)
-            async for data_message in self.streaming:
-                if data_message.is_control:
-                    pass
-                else:
-                    self.message_id = data_message.message_id
-                    self.streamers[data_message.reference_id].put(data_message)
+    # async def service(self) -> None:
+    #     try:
+    #         self.streaming = await self.connect(access_token)
+    #         async for data_message in self.streaming:
+    #             if data_message.is_control:
+    #                 pass
+    #             else:
+    #                 self.message_id = data_message.message_id
+    #                 self.streamers[data_message.reference_id].put(data_message)
 
-        except asyncio.CancelledError:
-            pass
+    #     except asyncio.CancelledError:
+    #         pass
 
-        finally:
-            await self.disconnect()
+    #     finally:
+    #         await self.disconnect()
 
-    async def reauthorize(self, access_token: str):
-        self.access_token = access_token
-        params = StreamingwsAuthorizeReq(contextid=self.context_id).dict()
-        _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
+    # async def reauthorize(self, access_token: str):
+    #     self.access_token = access_token
+    #     params = StreamingwsAuthorizeReq(contextid=self.context_id).dict()
+    #     _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
 
     # async def __create_subscription(self, reference_id: ReferenceId, arguments: SaxobankModel)
-    async def closedpositions_subscription(self, reference_id: ReferenceId, arguments, format, refresh_rate):
-        assert self.streaming
+    async def chart_charts_subscription_post(
+        self,
+        reference_id: Optional[ReferenceId],
+        arguments: Optional[SaxobankModel],
+        replace_reference_id: Optional[ReferenceId],
+        format: Optional[str],
+        refresh_rate: Optional[int],
+        tag: Optional[str],
+    ):
+        # assert self.streaming
+        reference_id = reference_id
 
         req = endpoint.port.closed_positions.POST_SUBSCRIPTION.request_model(
             ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
         )
 
-        res = await self.user_session.port.closed_positions.post_subscription(req)
+        res = await self.user_session.chart_charts_subscription_post(req)
 
         streamer = self.streamers[reference_id]
 

@@ -140,10 +140,13 @@ class SaxobankModel(BaseModel):
         return {}
 
     def dict(self, **kwargs) -> dict:
-        return super().dict(exclude_unset=True, **kwargs)
+        return super().dict(exclude_unset=True, exclude_none=True, **kwargs)
+
+    def as_request(self, **kwargs) -> dict:
+        return super().dict(exclude_unset=True, exclude_none=True, **kwargs)
 
     def dict_lower_case(self, **kwargs) -> dict:
-        return super().dict(by_alias=True, exclude_unset=True, **kwargs)
+        return super().dict(by_alias=True, exclude_unset=True, exclude_none=True, **kwargs)
 
     class Config:
         arbitrary_types_allowed = True
