@@ -122,17 +122,23 @@ class Streaming:
     def __init__(self, ws_resp: aiohttp.ClientWebSocketResponse, streamers: Streamers):
         self.ws_resp = ws_resp
 
-    async def __aiter__(self):
-        yield await self.receive()
-
-    async def close(self) -> bool:
-        return await self.ws_resp.close()
-
-    async def pop(self, reference_id: ReferenceId):
+    async def get(self, reference_id: ReferenceId):
         return await self.streamers[reference_id].get()
 
     async def receive(self) -> DataMessage:
         return DataMessage(await self.ws_resp.receive_bytes())
+
+    async def __aiter__(self):
+        yield await self.receive()
+
+    async def __aenter__(self):
+        return self
+
+    async def disconnect(self) -> bool:
+        return await self.ws_resp.close()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return await self.disconnect()
 
 
 class StreamingSession:
@@ -157,24 +163,10 @@ class StreamingSession:
         self.streaming: Optional[Streaming] = None
 
     async def connect(self, message_id: Optional[int] = None, access_token: Optional[str] = None) -> Streaming:
-        if not self.streaming:
-            params = model_streaming.ReqConnect(contextid=self.context_id, messageid=message_id).as_request()
-            self.streaming = Streaming(await self.ws_client.ws_connect(self.connect_url, params=params), self.streamers)
+        params = model_streaming.ReqConnect(contextid=self.context_id, messageid=message_id).as_request()
+        self.streaming = Streaming(await self.ws_client.ws_connect(self.connect_url, params=params), self.streamers)
 
         return self.streaming
-
-    # __aenter__ = connect
-
-    async def disconnect(self) -> bool:
-        if not self.streaming:
-            return False
-
-        ret = await self.streaming.close()
-        self.streaming = None
-        return ret
-
-    # async def __aexit__(self, exc_type, exc_value, traceback):
-    #     self.disconnect(self)
 
     # async def service(self) -> None:
     #     try:

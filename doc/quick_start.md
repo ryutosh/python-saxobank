@@ -54,7 +54,7 @@ async def your_strategy(stream):
 
     while True:
         try:
-            short = await receiver.pop(ref_short):
+            short = await stream.receive(ref_short):
 
             if something:
                 buy()
@@ -64,10 +64,19 @@ async def your_strategy(stream):
                 ref_short = await subscribe_chart(60)
 
 
-async with streaming_session.connect() as stream:
+async with streaming_session.connect(access_token=your_access_token) as stream:
     await your_strategy(stream)
 
+# or
+stream = streaming_session.connect(access_token=your_access_token)
+await your_strategy(stream)
+#await streaming_session.disconnect()
+await stream.disconnect()
 
+# or
+stream = streaming_session.connect(access_token=your_access_token)
+async with stream:
+    await your_strategy(stream)
 
 
 # async with streaming.connect() as stream:
