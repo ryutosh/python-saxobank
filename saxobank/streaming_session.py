@@ -128,8 +128,13 @@ class Streaming:
     async def receive(self) -> DataMessage:
         return DataMessage(await self.ws_resp.receive_bytes())
 
-    async def __aiter__(self):
-        yield await self.receive()
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.ws_resp.closed:
+            raise StopAsyncIteration
+        return await self.receive()
 
     async def __aenter__(self):
         return self
@@ -139,6 +144,19 @@ class Streaming:
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self.disconnect()
+
+
+class Distributor:
+    def __init__(self, streaming: Streaming, max_message_size=None):
+        self._streaming = streaming
+    
+    def stream(self, reference_id: ReferenceId):
+        pass
+
+    async def distribute(self, on_error=None, on_disconnect=None):
+        while True:
+            async for message in self.streaming:
+                pass
 
 
 class StreamingSession:
