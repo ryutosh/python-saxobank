@@ -54,7 +54,7 @@ async def your_strategy(stream):
 
     while True:
         try:
-            short = await stream.receive(ref_short):
+            short = await stream.receive():
 
             if something:
                 buy()

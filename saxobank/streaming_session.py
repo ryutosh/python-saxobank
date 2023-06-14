@@ -103,33 +103,24 @@ class DataMessage:
         return self.__parse_str(self.message, self.__LAYOUT_REF_ID.INDEX, self.__LAYOUT_REF_ID.SIZE + self.__reference_id_size)
 
 
-# class SubscriptionStreaming:
-#     def __init__(self, queue: Queue, subscription: Subscription):
-#         self.queue = queue
-#         self.subscription = subscription
-
-#     def __iter__(self):
-#         yield await self.receive()
-
-#     async def close(self):
-#         await self.subscription.remove()
-
-#     async def receive(self) -> DataMessage:
-#         return await self.queue.get()
-
-
 class Streaming:
-    def __init__(self, ws_resp: aiohttp.ClientWebSocketResponse, streamers: Streamers):
+    def __init__(self, ws_resp: aiohttp.ClientWebSocketResponse, subscriptions: Subscriptions, raise_if_stream_error: bool = False):
         self.ws_resp = ws_resp
-
-    async def get(self, reference_id: ReferenceId):
-        return await self.streamers[reference_id].get()
-
-    async def receive(self) -> DataMessage:
-        return DataMessage(await self.ws_resp.receive_bytes())
+        self.raise_error = raise_if_stream_error
+        self.subscriptions = subscriptions
+        self.timeout_candidates = set()
 
     def __aiter__(self):
         return self
+
+    async def receive(self) -> DataMessage:
+        # self.timeout_candidates.add(self.subscriptions.list_timeouts())
+
+        message = DataMessage(await self.ws_resp.receive_bytes())
+
+
+
+        return message
 
     async def __anext__(self):
         if self.ws_resp.closed:
@@ -146,18 +137,24 @@ class Streaming:
         return await self.disconnect()
 
 
-class Distributor:
-    def __init__(self, streaming: Streaming, max_message_size=None):
-        self._streaming = streaming
-    
-    def stream(self, reference_id: ReferenceId):
-        pass
+# class Distributor:
+#     def __init__(self, streaming: Streaming, max_message_size=None):
+#         self._streaming = streaming
 
-    async def distribute(self, on_error=None, on_disconnect=None):
-        while True:
-            async for message in self.streaming:
-                pass
+#     def stream(self, reference_id: ReferenceId):
+#         pass
 
+#     async def distribute(self, on_error=None, on_disconnect=None):
+#         while True:
+#             async for message in self.streaming:
+#                 pass
+
+class ResponseParser:
+    def __init__(self, snapshot, inactivity_timeout: int):
+        self.snapshot = snapshot
+        self.timeout = inactivity_timeout
+
+    def 
 
 class StreamingSession:
     WS_AUTHORIZE_PATH: str = "authorize"
@@ -186,28 +183,12 @@ class StreamingSession:
 
         return self.streaming
 
-    # async def service(self) -> None:
-    #     try:
-    #         self.streaming = await self.connect(access_token)
-    #         async for data_message in self.streaming:
-    #             if data_message.is_control:
-    #                 pass
-    #             else:
-    #                 self.message_id = data_message.message_id
-    #                 self.streamers[data_message.reference_id].put(data_message)
-
-    #     except asyncio.CancelledError:
-    #         pass
-
-    #     finally:
-    #         await self.disconnect()
 
     # async def reauthorize(self, access_token: str):
     #     self.access_token = access_token
     #     params = StreamingwsAuthorizeReq(contextid=self.context_id).dict()
     #     _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
 
-    # async def __create_subscription(self, reference_id: ReferenceId, arguments: SaxobankModel)
     async def chart_charts_subscription_post(
         self,
         reference_id: Optional[ReferenceId],
