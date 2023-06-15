@@ -1,26 +1,30 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Literal, Optional
 
-from .common import ContextId, SaxobankModel  # , HeartbeatReason, ReferenceId,
-
-# class StreamingwsHeartbeatSubscriptionRes(SaxobankModel):
-#     OriginatingReferenceId: ReferenceId
-#     Reason: HeartbeatReason
+from .common import ContextId, ReferenceId, SaxobankModel
+from .enum import HeartbeatReason
 
 
-# class StreamingwsHeartbeatRes(SaxobankModel):
-#     ReferenceId: Literal["_heartbeat"]
-#     Heartbeats: StreamingwsHeartbeatSubscriptionRes
+class Heartbeats(SaxobankModel):
+    OriginatingReferenceId: ReferenceId
+    Reason: HeartbeatReason
 
 
-# class StreamingwsDisconnectRes(SaxobankModel):
-#     ReferenceId: Literal["_disconnect"]
+class ResHeartbeat(SaxobankModel):
+    ReferenceId: Literal["_heartbeat"]
+    Heartbeats: List[Heartbeats]
+
+    def filter_reasons(self, reasons: List[HeartbeatReason]) -> List[Heartbeats]:
+        def check(heartbeats: Heartbeats) -> bool:
+            return heartbeats.Reason in reasons
+
+        return list(filter(check, self.Heartbeats))
 
 
-# class StreamingwsResetSubscriptionsRes(SaxobankModel):
-#     ReferenceId: Literal["_resetsubscriptions"]
-#     TargetReferenceIds: List[common.ReferenceId]
+class ResResetSubscriptions(SaxobankModel):
+    ReferenceId: Literal["_resetsubscriptions"]
+    TargetReferenceIds: List[ReferenceId]
 
 
 class ReqConnect(SaxobankModel):

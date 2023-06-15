@@ -1,4 +1,5 @@
 # # https://docs.python.org/ja/3/tutorial/errors.html
+from .model.common import ReferenceId
 
 
 class SaxoException(Exception):
@@ -10,8 +11,33 @@ class StreamingError(SaxoException):
     pass
 
 
-class TimeoutError(StreamingError):
-    pass
+class ResetSubscriptionsError(StreamingError):
+    def __init__(self, reference_ids: list[ReferenceId]):
+        self.ref_ids = reference_ids
+
+    def __str__(self):
+        return f"Subscription of Reference ID {self.ref_ids} need to delete and re-create."
+
+
+class SubscriptionTimeoutError(StreamingError):
+    def __init__(self, reference_ids: list[ReferenceId]):
+        self.ref_ids = reference_ids
+
+    def __str__(self):
+        return f"Subscription of Reference ID {self.ref_ids} timed out."
+
+
+class SubscriptionPermanentlyDisabledError(StreamingError):
+    def __init__(self, reference_ids: list[ReferenceId]):
+        self.ref_ids = reference_ids
+
+    def __str__(self):
+        return f"Subscription of Reference ID {self.ref_ids} will be unavailable."
+
+
+class StreamingDisconnectError(StreamingError):
+    def __str__(self):
+        return f"Stream was disconnected. Client may reset password. Need to authorize again and recreate subscriptions."
 
 
 class RequestError(SaxoException):
@@ -23,7 +49,7 @@ class HttpClientError(RequestError):
         self.message = message
 
     def __str__(self):
-        return "HttpClient raised an error. {self.message}"
+        return f"HttpClient raised an error. {self.message}"
 
 
 # class RequestUnauthorizedError(RequestError):

@@ -4,7 +4,7 @@ import string
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum, auto, unique
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Final, List, Optional, Tuple, Type, Union
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -48,11 +48,6 @@ class ContextId:
         )
 
 
-# class HeartbeatReason(Enum):
-#     NoNewData = auto()
-#     SubscriptionTemporarilyDisabled = auto()
-#     SubscriptionPermanentlyDisabled = auto()
-
 
 class ODataRequest(BaseModel):
     inlinecount: Optional[InlineCountValue] = None
@@ -87,6 +82,7 @@ class ODataResponse(BaseModel):
 
 
 class ReferenceId:
+
     def __init__(self, id: int | str | None = None):
         id = id if id else str(uuid4())
         assert self.validate(id)

@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 # TODO: Not full covered
@@ -38,6 +38,12 @@ class ClientPositionNettingProfile(str, Enum):
     AverageRealTime = "AverageRealTime"
     FifoEndOfDay = "FifoEndOfDay"
     FifoRealTime = "FifoRealTime"
+
+
+class HeartbeatReason(Enum):
+    NoNewData = auto()
+    SubscriptionTemporarilyDisabled = auto()
+    SubscriptionPermanentlyDisabled = auto()
 
 
 class InfoPriceGroupSpec(str, Enum):

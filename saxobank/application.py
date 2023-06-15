@@ -9,7 +9,6 @@ from aiohttp import ClientSession
 from .environment import LIVE, SIM, SaxobankEnvironment
 from .model.common import ContextId
 from .service_group import _Portfolio, _Reference, _Root
-
 # from .streaming_session import StreamingSession
 from .user_session import RateLimiter, UserSession
 
