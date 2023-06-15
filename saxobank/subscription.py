@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import asyncio
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, List, Optional, Set
@@ -83,27 +84,38 @@ def is_aware_datetime(target: datetime):
 class Subscription:
     delta_model: SaxobankModel = None
 
-    def __init__(self, reference_id: ReferenceId, inactivity_timeout_secs: int, snapshot: SaxobankModel):
+    def __init__(self, reference_id: ReferenceId):
         self.reference_id = reference_id
-        self.timeout = timedelta(seconds=inactivity_timeout_secs)
-        self.snapshot = snapshot
-        self.delta: Optional[SaxobankModel] = None
+        self._deltas = asyncio.Queue()
+
+        # Post setups
+        self._setup_done = asyncio.Event()
+        self.snapshot: Optional[SaxobankModel] = None
+        self.timeout: Optional[timedelta] = None
         self.active_until: Optional[datetime] = None
 
     def heartbeats(self):
-        self.active_until = datetime.now(timezone.utc) + self.timeout
+        if self.timeout:
+            self.active_until = datetime.now(timezone.utc) + self.timeout
 
-    def apply_delta(self, delta: SaxobankModel):
-        self.delta = delta
-        self.snapshot = self.snapshot.apply_delta(delta)
+    def setup(self, inactivity_timeout_secs: int, snapshot: SaxobankModel):
+        self.timeout = timedelta(seconds=inactivity_timeout_secs)
+        self.snapshot = snapshot
+        self._setup_done.set()
+
+    async def apply_delta(self, delta: SaxobankModel):
+        await self._deltas.put(delta)
 
     def inactive_before(self, dt: datetime) -> bool:
         assert is_aware_datetime(dt)
         return (self.active_until < dt) if self.active_until else False
 
-    @property
-    def message(self):
-        return self.snapshot, self.delta
+    async def message(self):
+        await self._setup_done.wait()
+
+        delta = await self._deltas.get()
+        self.snapshot = self.snapshot.apply_delta(delta)
+        return self.snapshot, delta
 
 
 class Subscriptions:

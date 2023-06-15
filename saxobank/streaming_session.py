@@ -175,10 +175,10 @@ class Streaming:
             if not subscription:
                 continue
 
-            subscription.apply_delta(subscription.delta_model.parse_obj(payload))
+            await subscription.apply_delta(subscription.delta_model.parse_obj(payload))
             subscription.heartbeats()
 
-            return subscription.message
+            return await subscription.message()
 
     async def __anext__(self):
         if self.ws_resp.closed:
@@ -252,13 +252,14 @@ class StreamingSession:
         # assert self.streaming
         reference_id = reference_id
 
+        subscription = ChartsSubscription(reference_id)
+        self._subscriptions.append(subscription)
+
         req = endpoint.port.closed_positions.POST_SUBSCRIPTION.request_model(
             ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
         )
 
         res = await self.user_session.chart_charts_subscription_post(req)
-
-        subscription = ChartsSubscription()
 
         if hasattr(res.response_model, "InactivityTimeout"):
             subscription.set_timeout(res.response_model.Snapshot)
