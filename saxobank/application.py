@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from functools import partialmethod
+from typing import Coroutine, Optional, Tuple
 
 import simplejson
 from aiohttp import ClientSession
 
+from . import endpoint
 from .environment import LIVE, SIM, SaxobankEnvironment
-from .model.common import ContextId
-from .service_group import _Portfolio, _Reference, _Root
-# from .streaming_session import StreamingSession
-from .user_session import RateLimiter, UserSession
+from .model.common import ContextId, ResponseCode, SaxobankModel
+from .streaming_session import StreamingSession
+from .user_session import RateLimiter, UserSession, _OpenApiRequestResponse
 
 # from environment import Environment
 
@@ -45,41 +46,21 @@ class SessionFacade:
     #     self.user_session = UserSession(self.rest_base_url, client_session, self.limiter, access_token)
 
     def __init__(self, user_session: UserSession) -> None:
-        self.__user_session = user_session
-        # self.port = self.__Portfolio(
-        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        # )
-        # self.port.clients = self.port.Clients(
-        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        # )
-        # self.port.positions = self.port.Positions(
-        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        # )
-        # self.port.closed_positions = self.port.ClosedPositions(
-        #     self.__user_session.base_url, self.__user_session.http, self.__user_session.limiter, self.__user_session.token
-        # )
-        self.port = _Portfolio(self.__user_session)
-        self.ref = _Reference(self.__user_session)
-        self.root = _Root(self.__user_session)
+        self._user_session = user_session
 
-    def create_streaming(self, context_id: Optional[ContextId] = None) -> StreamingSession:
-        return None
-        # streaming_session = StreamingSession(self.__user_session, self.__user_session.http, context_id)
-        # return streaming_session
+    def _openapi_request(
+        self,
+        endpoint: endpoint.Endpoint,
+        request_model: SaxobankModel | None = None,
+        access_token: str | None = None,
+    ) -> _OpenApiRequestResponse:  # -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
+        return self._user_session.openapi_request(endpoint, request_model, access_token)
 
-    # class __Portfolio:
-    #     __init__ = UserSession.__init__
+    port_clients_me_get = partialmethod(_openapi_request, endpoint.PORT_CLIENTS_ME_GET)
+    port_closedpositions_get = partialmethod(_openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET)
+    ref_instruments_details_get = partialmethod(_openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET)
+    root_sessions_capabilities_put = partialmethod(_openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT)
 
-    #     class Clients:
-    #         __init__ = UserSession.__init__
-    #         get_me = UserSession.port_get_clients_me
-
-    #     class Positions:
-    #         __init__ = UserSession.__init__
-    #         get_positionid = UserSession.port_get_positions_positionid
-
-    #     class ClosedPositions:
-    #         __init__ = UserSession.__init__
-    #         post_subscription = UserSession.port_post_closedpositions_subscription
-    #         patch_subscription = UserSession.port_patch_closedpositions_subscription
-    #         delete_subscription = UserSession.port_delete_closedpositions_subscription
+    # def create_streaming(self, context_id: Optional[ContextId] = None) -> StreamingSession:
+    #     streaming_session = StreamingSession(self.__user_session, self.__user_session.http, context_id)
+    #     return streaming_session

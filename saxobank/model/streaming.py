@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from collections.abc import Container
+from typing import List, Literal, Optional, Set
 
 from .common import ContextId, ReferenceId, SaxobankModel
 from .enum import HeartbeatReason
@@ -15,11 +16,8 @@ class ResHeartbeat(SaxobankModel):
     ReferenceId: Literal["_heartbeat"]
     Heartbeats: List[Heartbeats]
 
-    def filter_reasons(self, reasons: List[HeartbeatReason]) -> List[Heartbeats]:
-        def check(heartbeats: Heartbeats) -> bool:
-            return heartbeats.Reason in reasons
-
-        return list(filter(check, self.Heartbeats))
+    def filter_reasons(self, reasons: Container[HeartbeatReason]) -> Set[Heartbeats]:
+        return {h.OriginatingReferenceId for h in self.Heartbeats if h.Reason in reasons}
 
 
 class ResResetSubscriptions(SaxobankModel):

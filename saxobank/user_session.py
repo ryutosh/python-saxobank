@@ -2,28 +2,31 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Coroutine
-from datetime import datetime
-from functools import partial
-from typing import Any, Optional, Tuple
+from dataclasses import dataclass
+from functools import partial, partialmethod
+from typing import Any, Optional, Tuple, cast
 from urllib.parse import urljoin
 
 import aiohttp
 import pydantic
 
 from . import endpoint, exception
+from .common import auth_header
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
 from .model.common import ErrorResponse, ODataResponse, ResponseCode, SaxobankModel
-from .service_group import _Portfolio, _Reference, _Root
-
-# from functools import partialmethod
 
 
 class RateLimiter:
-    async def throttle(
-        self, dimension: Optional[Dimension] = None, is_order: bool = False, effectual_until: Optional[datetime] = None
-    ):
+    async def throttle(self, dimension: Optional[Dimension] = None, is_order: bool = False) -> None:
         pass
+
+
+@dataclass
+class _OpenApiRequestResponse:
+    code: ResponseCode
+    model: Optional[SaxobankModel]
+    next_request: Optional[Coroutine]
 
 
 class UserSession:
@@ -35,7 +38,7 @@ class UserSession:
     #     500: exception.SaxobankServiceError,
     #     503: exception.SaxobankServiceUnavailableError,
     # }
-    _OpenApiRequestResponse = namedtuple("_OpenApiRequestResponse", ["code", "model", "next_request"])
+    # _OpenApiRequestResponse = namedtuple("_OpenApiRequestResponse", ["code", "model", "next_request"])
 
     def __init__(
         self,
@@ -49,17 +52,12 @@ class UserSession:
         self.limiter = rate_limiter
         self.token = access_token
 
-        self.port = _Portfolio(self)
-        self.ref = _Reference(self)
-        self.root = _Root(self)
-
     async def openapi_request(
         self,
         endpoint: endpoint.Endpoint,
         request_model: SaxobankModel | None = None,
-        effectual_until: datetime | None = None,
         access_token: str | None = None,
-    ) -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
+    ) -> _OpenApiRequestResponse:  # Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         url = urljoin(self.base_url, endpoint.url(request_model.path_items() if request_model else None))
         params = request_model.dict_lower_case() if request_model and endpoint.method == HttpMethod.GET else None
         data = request_model.dict() if request_model and endpoint.method != HttpMethod.GET else None
@@ -68,7 +66,10 @@ class UserSession:
         # params = req_data if endpoint.method == HttpMethod.GET else None
         # data = req_data if endpoint.method != HttpMethod.GET else None
 
-        await self.limiter.throttle(endpoint.dimension, endpoint.is_order, effectual_until)
+        if not self.token and not access_token:
+            raise exception.NoAccessTokenError
+
+        await self.limiter.throttle(endpoint.dimension, endpoint.is_order)
 
         try:
             async with self.http.request(
@@ -77,7 +78,7 @@ class UserSession:
                 params=params,
                 data=data if endpoint.content_type != ContentType.JSON else None,
                 json=data if endpoint.content_type == ContentType.JSON else None,
-                headers={"Authorization": f"Bearer {access_token if access_token else self.token}"},
+                headers=auth_header(cast(str, access_token if access_token else self.token)),
                 raise_for_status=False,
             ) as response:
                 info = response.request_info
@@ -85,12 +86,15 @@ class UserSession:
                 json = await response.json() if response.content_type == ContentType.JSON else None
 
             if error_response := self.error_response(code, json):
-                return self._OpenApiRequestResponse(code, error_response, None)
+                return _OpenApiRequestResponse(code, error_response, None)
 
-            response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
+            from pydantic import parse_obj_as
+
+            # response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
+            response_model = parse_obj_as(endpoint.response_model, json) if endpoint.response_model else None
             is_odata, next_callback = self.is_odata_response(response_model)
 
-            return self._OpenApiRequestResponse(code, response_model.Data if is_odata else response_model, next_callback)
+            return _OpenApiRequestResponse(code, response_model.Data if is_odata else response_model, next_callback)
 
         except aiohttp.ClientResponseError as ex:
             raise exception.ResponseError(ex.status, ex.message)
@@ -127,3 +131,21 @@ class UserSession:
 
         next_request_model = next_endpoint.request_model.parse_obj(next.query)
         return True, partial(self.openapi_request, next_endpoint, next_request_model)
+
+    # Chart
+    chart_charts_subscription_post = partialmethod(openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST)
+
+    # Portfolio
+    port_clients_me_get = partialmethod(openapi_request, endpoint.PORT_CLIENTS_ME_GET)
+    port_closedpositions_get = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET)
+    port_closedpositions_subscription_post = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_POST)
+    port_closedpositions_subscription_patch = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_PATCH)
+    port_closedpositions_subscription_delete = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_DELETE)
+    port_positions_me_get = partialmethod(openapi_request, endpoint.PORT_POSITIONS_ME_GET)
+    port_positions_positionid_get = partialmethod(openapi_request, endpoint.PORT_POSITIONS_POSITIONID_GET)
+
+    # Reference
+    ref_instruments_details_get = partialmethod(openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET)
+
+    # Root
+    root_sessions_capabilities_put = partialmethod(openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT)

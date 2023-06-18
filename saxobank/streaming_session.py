@@ -5,17 +5,19 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Any, Literal, Optional
+from types import TracebackType
+from typing import Any, Iterable, Literal, Optional, Type, Union
 from urllib.parse import urljoin
 
 import aiohttp
 
 # from api_call import Dispatcher
 from . import endpoint, exception
-from .enum import HeartbeatReason
+from .common import auth_header
 from .environment import WsBaseUrl
 from .model import streaming as model_streaming
 from .model.common import ContextId, ReferenceId, SaxobankModel
+from .model.enum import HeartbeatReason
 from .subscription import Subscriptions
 
 # from .subscription import PortClosedPositions
@@ -49,7 +51,7 @@ class DataMessage:
         self.message = message
 
     @classmethod
-    @lru_cache
+    @lru_cache()
     def __parse_int(cls, b: bytes) -> int:
         return int.from_bytes(b, cls.__BYTEORDER)
 
@@ -58,7 +60,7 @@ class DataMessage:
         return json.loads(b.decode(cls.__ENCODING_UTF8, cls.__DECODE_ERROR))
 
     @classmethod
-    @lru_cache
+    @lru_cache()
     def __parse_str(cls, b: bytes) -> str:
         return b.decode(cls.__ENCODING_ASCII, cls.__DECODE_ERROR)
 
@@ -116,13 +118,13 @@ class Streaming:
         self, ws_resp: aiohttp.ClientWebSocketResponse, subscriptions: Subscriptions, raise_if_stream_error: bool = False
     ):
         self._ws_resp = ws_resp
-        self._raise_error = raise_if_stream_error
         self._subscriptions = subscriptions
+        self._raise_error = raise_if_stream_error
 
-    def __aiter__(self):
+    def __aiter__(self) -> "Streaming":
         return self
 
-    def _return_or_raise_error(self, error: Exception):
+    def _return_or_raise(self, error: Exception) -> Exception:
         if self._raise_error:
             raise error
         return error
@@ -131,18 +133,31 @@ class Streaming:
     def _empty(self) -> bool:
         return len(self._ws_resp._reader) == 0
 
-    async def receive(self) -> DataMessage:
+    def _purge_subscriptions(self, reference_ids: Iterable[ReferenceId]) -> None:
+        for ref in reference_ids:
+            self._subscriptions.remove(ref)
+
+    def _handle_reset_subscriptions(self, payload: Any) -> Exception:
+        reset_subscriptions = model_streaming.ResResetSubscriptions.parse_obj(payload)
+
+        # All reference ids are required to reset if no TargetReferenceIds set.
+        need_resets = (
+            set(reset_subscriptions.TargetReferenceIds)
+            if reset_subscriptions.TargetReferenceIds
+            else self._subscriptions.reference_ids
+        )
+        self._purge_subscriptions(need_resets)
+        return self._return_or_raise(exception.ResetSubscriptionsError(need_resets))
+
+    async def receive(self) -> Union[DataMessage, Exception]:
         while True:
             timestamp_of_empty = datetime.now(tz=timezone.utc)
 
+            # Without any incoming data, subscriptions that passed inactivity timeout should be considred as invalid.
             if self._empty:
-                timeout_subscriptions = self._subscriptions.timeouts(timestamp_of_empty)
-                if timeout_subscriptions:
-                    return self._return_or_raise_error(
-                        exception.SubscriptionTimeoutError(
-                            [subscription.reference_id for subscription in timeout_subscriptions]
-                        )
-                    )
+                timeouts = self._subscriptions.remove_timeouts(timestamp_of_empty)
+                if timeouts:
+                    return self._return_or_raise(exception.SubscriptionTimeoutError(timeouts))
 
             message = DataMessage(await self._ws_resp.receive_bytes())
             ref_id = message.reference_id
@@ -150,48 +165,43 @@ class Streaming:
 
             if ref_id == self._REF_ID_HEARTBEAT:
                 heartbeat = model_streaming.ResHeartbeat.parse_obj(payload)
-                self._subscriptions.heartbeats([heartbeat.OriginatingReferenceId for heartbeat in heartbeat.Heartbeats])
+                self._subscriptions.extend_timeout([h.OriginatingReferenceId for h in heartbeat.Heartbeats])
 
-                heartbeat_unavailables = heartbeat.filter_reasons([HeartbeatReason.SubscriptionPermanentlyDisabled])
-                if heartbeat_unavailables:
-                    unavailable_ref_ids = [heartbeat.OriginatingReferenceId for heartbeat in heartbeat_unavailables]
-                    self._subscriptions.remove(unavailable_ref_ids)
-                    return self._return_or_raise_error(exception.SubscriptionPermanentlyDisabledError(unavailable_ref_ids))
+                permanently_disables = heartbeat.filter_reasons([HeartbeatReason.SubscriptionPermanentlyDisabled])
+                if permanently_disables:
+                    self._purge_subscriptions(permanently_disables)
+                    return self._return_or_raise(exception.SubscriptionPermanentlyDisabledError(permanently_disables))
 
             elif ref_id == self._REF_ID_RESETSUBSCRIPTIONS:
-                reset_subscriptions = model_streaming.ResResetSubscriptions.parse_obj(payload)
-                unavailable_ref_ids = (
-                    reset_subscriptions.TargetReferenceIds
-                    if reset_subscriptions.TargetReferenceIds
-                    else list(self._subscriptions.reference_ids())
-                )
-                self._subscriptions.remove(unavailable_ref_ids)
-                return self._return_or_raise_error(exception.ResetSubscriptionsError(unavailable_ref_ids))
+                return self._handle_reset_subscriptions(payload)
 
             elif ref_id == self._REF_ID_DISCONNECT:
-                return self._return_or_raise_error(exception.StreamingDisconnectError())
+                return self._return_or_raise(exception.StreamingDisconnectError())
 
-            subscription = self._subscriptions.get(ReferenceId(ref_id), None)
+            # trash data message of Reference ID that's not under observation
+            subscription = self._subscriptions.get(ref_id)
             if not subscription:
                 continue
 
             await subscription.apply_delta(subscription.delta_model.parse_obj(payload))
-            subscription.heartbeats()
+            subscription.extend_timeout()
 
-            return await subscription.message()
+            return await subscription.snapshot()
 
-    async def __anext__(self):
-        if self.ws_resp.closed:
+    async def __anext__(self) -> Union[DataMessage, Exception]:
+        if self._ws_resp.closed:
             raise StopAsyncIteration
         return await self.receive()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "Streaming":
         return self
 
     async def disconnect(self) -> bool:
         return await self._ws_resp.close()
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]
+    ) -> bool:
         return await self.disconnect()
 
 
@@ -217,28 +227,35 @@ class StreamingSession:
         ws_base_url: WsBaseUrl,
         user_session: UserSession,
         ws_client: aiohttp.ClientSession,
+        access_token: str,
         context_id: Optional[ContextId] = None,
-        access_token: Optional[str] = None,
     ) -> None:
-        self.auth_url = urljoin(ws_base_url, self.WS_AUTHORIZE_PATH)
-        self.connect_url = urljoin(ws_base_url, self.WS_CONNECT_PATH)
-        self.user_session = user_session
-        self.ws_client = ws_client
-        self.context_id = context_id if context_id else ContextId()
-        self.access_token = access_token
+        self._auth_url = urljoin(ws_base_url, self.WS_AUTHORIZE_PATH)
+        self._connect_url = urljoin(ws_base_url, self.WS_CONNECT_PATH)
+        self._user_session = user_session
+        self._ws_client = ws_client
+        self._context_id = context_id if context_id else ContextId()
+        self.token = access_token
         self._subscriptions = Subscriptions()
         self._streaming: Optional[Streaming] = None
 
-    async def connect(self, message_id: Optional[int] = None, access_token: Optional[str] = None) -> Streaming:
-        params = model_streaming.ReqConnect(contextid=self.context_id, messageid=message_id).as_request()
-        self._streaming = Streaming(await self.ws_client.ws_connect(self.connect_url, params=params), self._subscriptions)
+    async def connect(self, message_id: Optional[int] = None) -> Streaming:
+        params = model_streaming.ReqConnect(contextid=self._context_id, messageid=message_id).as_request()
+        headers = auth_header(self.token)
+
+        self._streaming = Streaming(
+            await self._ws_client.ws_connect(self._connect_url, params=params, headers=headers), self._subscriptions
+        )
 
         return self._streaming
 
-    # async def reauthorize(self, access_token: str):
-    #     self.access_token = access_token
-    #     params = StreamingwsAuthorizeReq(contextid=self.context_id).dict()
-    #     _ = await self.ws_client.put(self.WS_AUTHORIZE_URL, params=params)
+    async def reauthorize(self, access_token: str) -> bool:
+        self.token = access_token
+        headers = auth_header(self.token)
+        params = model_streaming.ReqAuthorize(contextid=self._context_id).as_request()
+
+        res = await self._ws_client.put(self._auth_url, params=params, headers=headers)
+        return True if res.ok else False
 
     async def chart_charts_subscription_post(
         self,
@@ -253,23 +270,21 @@ class StreamingSession:
         reference_id = reference_id
 
         subscription = ChartsSubscription(reference_id)
-        self._subscriptions.append(subscription)
+        self._subscriptions.add(subscription)
 
-        req = endpoint.port.closed_positions.POST_SUBSCRIPTION.request_model(
+        req = endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_POST.request_model(
             ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
         )
 
-        res = await self.user_session.chart_charts_subscription_post(req)
+        res = await self._user_session.chart_charts_subscription_post(req)
 
-        if hasattr(res.response_model, "InactivityTimeout"):
-            subscription.set_timeout(res.response_model.Snapshot)
+        if res.code.is_successful:
+            pass
 
-        is_odata, next_callback = self.user_session.is_odata_response(res.response_model)
-        if is_odata:
-            subscription.set_snapshot(res.response_model.Snapshot.Data)
+        is_odata, next_callback = self._user_session.is_odata_response(res.model)
+        snapshot = res.response_model.Snapshot.Data if is_odata else res.response_model.Snapshot
 
-        else:
-            subscription.set_snapshot(res.response_model.Snapshot)
+        subscription._setup(res.response_model.InactivityTimeout, snapshot)
 
         return streamer, next_callback if is_odata else None
 
@@ -281,122 +296,3 @@ class StreamingSession:
     #     return await self.session.openapi_request(
     #         self.Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, req, acess_token=access_token
     #     )
-
-
-class Streamers(UserDict):
-    def __init__(self, context_id: ContextId):
-        self.context_id = context_id
-        super().__init__()
-
-    def __missing__(self, key: ReferenceId):
-        self[key] = streamer = Streamer(self.context_id, key)
-        return streamer
-
-
-class Streamer:
-    def __init__(self, context_id: ContextId, reference_id: ReferenceId, minimum_inactivity_timeout: int = 2):
-        self.context_id = context_id
-        self.reference_id = reference_id
-        self.minimum_timeout = minimum_inactivity_timeout
-
-        self.data_messages = asyncio.Queue()
-        self.snapshot: Union[SubscriptionSnapshotModel, ListResultModel] | None = None
-        self.__timeout: int | None = None
-
-    def __eq__(self, o: object) -> bool:
-        assert isinstance(o, self.__class__)
-        try:
-            return (self.context_id == o.context_id) and (self.reference_id == o.reference_id)
-        except AttributeError:
-            return False
-
-    async def put(self, data_message: DataMessage):
-        await self.data_messages.put(data_message.payload)
-
-    async def get(self) -> SaxobankModel:
-        assert self.snapshot
-        try:
-            payload = await asyncio.wait_for(self.data_messages.get(), timeout=self.timeout)
-
-        except TimeoutError:
-            raise exception.TimeoutError()
-
-        else:
-            self.snapshot = self.snapshot.apply_delta(payload)
-            self.data_messages.task_done()
-
-            if not self.snapshot.message_complete():
-                return await self.get()
-
-            return self.snapshot
-
-    @property
-    def timeout(self):
-        return self.__timeout
-
-    @timeout.setter
-    def timeout(self, value):
-        self.__timeout = max(value, self.minimum_timeout)
-
-
-# class ContextManager:
-#     def __init__(self, user_session: UserSession,  context_id: ContextId) -> None:
-#         self.user_session = user_session
-#         self.context_id = context_id
-#         self.ctxt = context_manager
-#         self.last_message_id
-#         self.streaming_session: = None
-
-#     def _handle_disconnect(self, control_message: StreamingwsDisconnectRes):
-#         self.last_message_id = data_message.message_id
-
-#     def _handle_heartbeat(self, control_message: StreamingwsHeartbeatRes):
-#         self.last_message_id = data_message.message_id
-
-#         if control_message.Heartbeats.Reason == SubscriptionPermanentlyDisabled:
-#             pass
-
-#     def _handle_reset_subscription(self, control_message: StreamingwsResetSubscriptionsRes):
-#         for reference_id in control_message.TargetReferenceIds:
-#             await self.subscripions[reference_id].remove()
-
-#     async def run(self):
-#         async with self.streaming_session as streaming:
-#             async for data_message in streaming:
-#                 if data_message.reference_id == DefinedReferenceId.Heartbeat:
-#                     self._handle_heartbeat(StreamingwsHeartbeatRes.parse_obj(data_message.payload))
-
-#                 elif data_message.reference_id == DefinedReferenceId.ResetSubscription:
-#                     self._handle_reset_subscription(StreamingwsResetSubscriptionsRes.parse_obj(data_message.payload))
-
-#                 elif data_message.reference_id == DefinedReferenceId.Disconnect:
-#                     self.streaming_session = StreamingSession(self.ws_client, self.context_id)
-#                     streaming = await self.streaming_session.connect(last_message_id)
-
-#                 else:
-#                     await subscriptions[data_message.reference_id].put(data_message.payload)
-#                     self.last_message_id = data_message.message_id
-
-
-# class Subscription:
-#     def __init__(self, queue: Queue, http_client: aiohttp.ClientSession, context_id: str, reference_id: str):
-#         self.queue = queue
-#         self.ctxt_id = context_id
-#         self.ref_id = reference_id
-
-#     async def __enter__(self):
-#         self.create()
-#         yield await self.queue.pop()
-
-#     async def __exit__(self):
-#         self.remove()
-
-#     async def create(self):
-#         self.http_client.request(self.entry_url)
-
-#     async def reset(self, reference_id):
-#         self.http_client.request(self.entry_url, self.referece_id, reference_id)
-#         self.reference_id = reference_id
-
-#     async def remove(self):
-#         self.http_client.request(self.exit_url)

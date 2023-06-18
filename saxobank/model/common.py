@@ -21,32 +21,21 @@ class ClientKey(str):
     pass
 
 
-class ContextId:
+class ContextId(str):
     MAX_ID_LENGTH: int = 50
     MIN_ID_LENGTH: int = 1
     ACCEPTABLE_CHARS: str = string.ascii_letters + string.digits + "-"
 
-    def __init__(self, id: int | str | None = None):
-        id = id if id else str(uuid4()).replace("-", "")
-        assert self.validate(id)
-        self.__id = str(id)
-
-    def __eq__(self, o: object):
-        return self.__id == str(o)
-
-    def __str__(self):
-        return str(self.__id)
-
-    def __repr__(self):
-        return repr(self.__id)
+    def __new__(cls, v: Optional[object] = None) -> ContextId:
+        id = v if v else str(uuid4())
+        if not cls.validate(id):
+            raise ValueError
+        return super().__new__(cls, id)
 
     @classmethod
-    def validate(cls, id: int | str) -> bool:
-        chars = str(id)
-        return (chars == "".join([c for c in chars if c in cls.ACCEPTABLE_CHARS])) and (
-            cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH
-        )
-
+    def validate(cls, v: object) -> bool:
+        chars = str(v)
+        return all([c in cls.ACCEPTABLE_CHARS for c in chars]) and (cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH)
 
 
 class ODataRequest(BaseModel):
@@ -81,26 +70,10 @@ class ODataResponse(BaseModel):
     #     return next_model
 
 
-class ReferenceId:
-
-    def __init__(self, id: int | str | None = None):
-        id = id if id else str(uuid4())
-        assert self.validate(id)
-        self.__id = str(id)
-
-    def __eq__(self, o: object):
-        assert isinstance(o, self.__class__)
-        return self.__id == o.__id
-
-    def __str__(self):
-        return str(self.__id)
-
-    def __repr__(self):
-        return repr(self.__id)
-
-    @classmethod
-    def validate(cls, id: int | str) -> bool:
-        return True
+class ReferenceId(str):
+    def __new__(cls, v: Optional[object] = None) -> ReferenceId:
+        id = v if v else str(uuid4())
+        return super().__new__(cls, id)
 
 
 @unique

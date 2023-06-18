@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import abc
 import asyncio
+import collections
+from collections.abc import Container
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
-from typing import Any, List, Optional, Set
+from typing import Iterator, Optional, Set, Union, cast
 
-from . import endpoint, model
-from .model.common import ContextId, ReferenceId, SaxobankModel
-from .user_session import UserSession
+from .common import is_aware_datetime
+from .model.common import ReferenceId, SaxobankModel
 
 # class BaseSubscription(abc.ABC):
 #     def __init__(self, user_session: UserSession, context_id: ContextId, reference_id: ReferenceId) -> None:
@@ -76,81 +75,93 @@ from .user_session import UserSession
 #         )
 
 
-@lru_cache
-def is_aware_datetime(target: datetime):
-    return target.tzinfo and target.tzinfo.utcoffset(target)
-
-
 class Subscription:
-    delta_model: SaxobankModel = None
+    # delta_model: SaxobankModel = None
 
-    def __init__(self, reference_id: ReferenceId):
-        self.reference_id = reference_id
-        self._deltas = asyncio.Queue()
+    def __init__(self, reference_id: Union[ReferenceId, str]) -> None:
+        self.reference_id = reference_id if isinstance(reference_id, ReferenceId) else ReferenceId(reference_id)
 
         # Post setups
-        self._setup_done = asyncio.Event()
-        self.snapshot: Optional[SaxobankModel] = None
-        self.timeout: Optional[timedelta] = None
-        self.active_until: Optional[datetime] = None
+        self._preparation = asyncio.Event()
+        self._snapshot: Optional[SaxobankModel] = None
+        self._inactivity_timeout: Optional[timedelta] = None
+        self._timeout_after: Optional[datetime] = None
 
-    def heartbeats(self):
-        if self.timeout:
-            self.active_until = datetime.now(timezone.utc) + self.timeout
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, self.__class__):
+            return False
+        return hash(self) == hash(o)
 
-    def setup(self, inactivity_timeout_secs: int, snapshot: SaxobankModel):
-        self.timeout = timedelta(seconds=inactivity_timeout_secs)
-        self.snapshot = snapshot
-        self._setup_done.set()
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.reference_id))
 
-    async def apply_delta(self, delta: SaxobankModel):
-        await self._deltas.put(delta)
+    def _setup(self, inactivity_timeout_secs: int, snapshot: SaxobankModel) -> None:
+        assert not self._preparation.is_set()
 
-    def inactive_before(self, dt: datetime) -> bool:
-        assert is_aware_datetime(dt)
-        return (self.active_until < dt) if self.active_until else False
+        self._inactivity_timeout = timedelta(seconds=inactivity_timeout_secs)
+        self._snapshot = snapshot
+        self._preparation.set()
 
-    async def message(self):
-        await self._setup_done.wait()
+    def extend_timeout(self) -> None:
+        if self._inactivity_timeout:
+            self._timeout_after = datetime.now(timezone.utc) + self._inactivity_timeout
 
-        delta = await self._deltas.get()
-        self.snapshot = self.snapshot.apply_delta(delta)
-        return self.snapshot, delta
+    def is_timed_out(self, evaluate_at: datetime) -> bool:
+        assert is_aware_datetime(evaluate_at)
+        return (self._timeout_after < evaluate_at) if self._timeout_after else False
+
+    async def snapshot(self, delta: SaxobankModel) -> SaxobankModel:
+        await self._preparation.wait()
+        assert self._snapshot is not None
+
+        self._snapshot = self._snapshot.apply_delta(delta)
+        return cast(SaxobankModel, self._snapshot)
 
 
-class Subscriptions:
-    def __init__(self):
+class Subscriptions(collections.abc.MutableSet):
+    def __init__(self) -> None:
         self._subscriptions: Set[Subscription] = set()
 
-    def heartbeats(self, reference_ids: List[ReferenceId]) -> None:
-        for subscription in self._subscriptions:
-            if subscription.reference_id in reference_ids:
-                subscription.heartbeats()
+    def __contains__(self, o: object) -> bool:
+        return o in self._subscriptions
 
-    def timeouts(self, inactive_before: datetime) -> Set[Subscription]:
-        assert is_aware_datetime(inactive_before)
+    def __iter__(self) -> Iterator[Subscription]:
+        return iter(self._subscriptions)
 
-        def inactives(subscription):
-            return subscription.inactive_before(inactive_before)
+    def __len__(self) -> int:
+        return len(self._subscriptions)
 
-        timeout_subscriptions = set(filter(inactives, self._subscriptions))
-        for subscription in timeout_subscriptions:
-            self._subscriptions.remove(subscription)
+    def get(self, reference_id: Union[ReferenceId, str]) -> Optional[Subscription]:
+        try:
+            cmp = reference_id if isinstance(reference_id, ReferenceId) else ReferenceId(reference_id)
+            return [s for s in self._subscriptions if s.reference_id == cmp][0]
+        except IndexError:
+            return None
 
-        return timeout_subscriptions
-
-    def remove(self, reference_ids: List[ReferenceId]) -> None:
-        copy = self._subscriptions.copy()
-
-        for subscription in copy:
-            if subscription.reference_id in reference_ids:
-                self._subscriptions.remove(subscription)
-
+    @property
     def reference_ids(self) -> Set[ReferenceId]:
         return {subscription.reference_id for subscription in self._subscriptions}
 
-    def get(self, reference_id: ReferenceId, default: Any) -> Any:
-        for subscription in self._subscriptions:
-            if subscription.reference_id == reference_id:
-                return subscription
-        return default
+    def extend_timeout(self, reference_ids: Container[ReferenceId]) -> None:
+        for subscription in {s for s in self._subscriptions if s.reference_id in reference_ids}:
+            subscription.extend_timeout()
+
+    def remove_timeouts(self, evaluate_at: datetime) -> Set[ReferenceId]:
+        assert is_aware_datetime(evaluate_at)
+
+        timeouts = {s for s in self._subscriptions if s.is_timed_out(evaluate_at)}
+        for subscription in timeouts:
+            self.remove(subscription)
+        return {s.reference_id for s in timeouts}
+
+    def add(self, subscription: Subscription) -> None:
+        assert isinstance(subscription, Subscription)
+        self._subscriptions.add(subscription)
+
+    def discard(self, subscription: Subscription) -> None:
+        assert isinstance(subscription, Subscription)
+        self._subscriptions.discard(subscription)
+
+    def remove(self, subscription: Union[Subscription, ReferenceId]) -> None:
+        target = subscription if isinstance(subscription, Subscription) else Subscription(subscription)
+        super().remove(target)
