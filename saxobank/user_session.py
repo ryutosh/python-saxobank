@@ -22,7 +22,7 @@ class RateLimiter:
         pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class _OpenApiRequestResponse:
     code: ResponseCode
     model: Optional[SaxobankModel]

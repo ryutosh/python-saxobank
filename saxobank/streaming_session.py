@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from types import TracebackType
-from typing import Any, Iterable, Literal, Optional, Type, Union
+from typing import Any, Coroutine, Iterable, Literal, Optional, Type, Union
 from urllib.parse import urljoin
 
 import aiohttp
@@ -16,7 +16,7 @@ from . import endpoint, exception
 from .common import auth_header
 from .environment import WsBaseUrl
 from .model import streaming as model_streaming
-from .model.common import ContextId, ReferenceId, SaxobankModel
+from .model.common import ContextId, ReferenceId, ResponseCode, SaxobankModel
 from .model.enum import HeartbeatReason
 from .subscription import Subscriptions
 
@@ -218,6 +218,17 @@ class Streaming:
 #                 pass
 
 
+@dataclass(frozen=True)
+class _CreateSubscriptionResponse:
+    code: ResponseCode
+    reference_id: Optional[ReferenceId]
+    snapshot: Optional[SaxobankModel]
+    next_request: Optional[Coroutine]
+    inactivity_timeout: Optional[int]
+    format: Optional[int]
+    refresh_rate: Optional[int]
+
+
 class StreamingSession:
     WS_AUTHORIZE_PATH: str = "authorize"
     WS_CONNECT_PATH: str = "connect"
@@ -257,7 +268,7 @@ class StreamingSession:
         res = await self._ws_client.put(self._auth_url, params=params, headers=headers)
         return True if res.ok else False
 
-    async def chart_charts_subscription_post(
+    async def create_subscription_request(
         self,
         reference_id: Optional[ReferenceId],
         arguments: Optional[SaxobankModel],
@@ -278,15 +289,28 @@ class StreamingSession:
 
         res = await self._user_session.chart_charts_subscription_post(req)
 
-        if res.code.is_successful:
-            pass
+        if res.code.is_error:
+            self._subscriptions.remove(subscription)
+            return _CreateSubscriptionResponse(res.code, None, None, None, None, None, None)
 
         is_odata, next_callback = self._user_session.is_odata_response(res.model)
-        snapshot = res.response_model.Snapshot.Data if is_odata else res.response_model.Snapshot
+        snapshot = res.model.Snapshot.Data if is_odata else res.model.Snapshot
 
-        subscription._setup(res.response_model.InactivityTimeout, snapshot)
+        subscription._setup(res.model.InactivityTimeout, snapshot)
 
-        return streamer, next_callback if is_odata else None
+        # return streamer, next_callback if is_odata else None
+        return _CreateSubscriptionResponse(res.code, reference_id, snapshot, next_callback, res.model.InactivityTimeout)
+
+    async def chart_charts_subscription_post(
+        self,
+        reference_id: Optional[ReferenceId],
+        arguments: Optional[SaxobankModel],
+        replace_reference_id: Optional[ReferenceId],
+        format: Optional[str],
+        refresh_rate: Optional[int],
+        tag: Optional[str],
+    ):
+        return self.create_subscription_request(self, reference_id, arguments, replace_reference_id, format, refresh_rate, tag)
 
     # async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:
     #     req = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, RequestModel(
