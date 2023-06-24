@@ -14,7 +14,8 @@ from . import endpoint, exception
 from .common import auth_header
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
-from .model.common import ErrorResponse, ODataResponse, ResponseCode, SaxobankModel
+from .model.common import (ErrorResponse, ODataResponse, ResponseCode,
+                           _SaxobankModel)
 
 
 class RateLimiter:
@@ -25,7 +26,7 @@ class RateLimiter:
 @dataclass(frozen=True)
 class _OpenApiRequestResponse:
     code: ResponseCode
-    model: Optional[SaxobankModel]
+    model: Optional[_SaxobankModel]
     next_request: Optional[Coroutine]
 
 
@@ -55,7 +56,7 @@ class UserSession:
     async def openapi_request(
         self,
         endpoint: endpoint.Endpoint,
-        request_model: SaxobankModel | None = None,
+        request_model: _SaxobankModel | None = None,
         access_token: str | None = None,
     ) -> _OpenApiRequestResponse:  # Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         url = urljoin(self.base_url, endpoint.url(request_model.path_items() if request_model else None))
@@ -119,7 +120,7 @@ class UserSession:
         except pydantic.ValidationError:
             return None
 
-    def is_odata_response(self, response_model: Optional[SaxobankModel]) -> Tuple[bool, Optional[Coroutine]]:
+    def is_odata_response(self, response_model: Optional[_SaxobankModel]) -> Tuple[bool, Optional[Coroutine]]:
         if not isinstance(response_model, ODataResponse):
             return False, None
 
@@ -133,6 +134,7 @@ class UserSession:
         return True, partial(self.openapi_request, next_endpoint, next_request_model)
 
     # Chart
+    chart_charts_subscription_delete = partialmethod(openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE)
     chart_charts_subscription_post = partialmethod(openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST)
 
     # Portfolio

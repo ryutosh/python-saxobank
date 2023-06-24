@@ -58,8 +58,16 @@ class Endpoint:
 
 
 CHART_CHARTS_GET = Endpoint("chart/v1/charts", HttpMethod.GET, Dimension.ChartMinute)
-CHART_CHARTS_SUBSCRIPTIONS_POST = Endpoint("chart/v1/charts/subscriptions", HttpMethod.POST, Dimension.ChartMinute, response_model=chart.ChartsSubscriptionsRes)
-
+CHART_CHARTS_SUBSCRIPTIONS_DELETE = Endpoint(
+    "chart/v1/charts/subscriptions", HttpMethod.DELETE, Dimension.ChartMinute, request_model=chart.charts.ReqSubscriptionDelete
+)
+CHART_CHARTS_SUBSCRIPTIONS_POST = Endpoint(
+    "chart/v1/charts/subscriptions",
+    HttpMethod.POST,
+    Dimension.ChartMinute,
+    request_model=chart.charts.ReqSubscriptionsPost,
+    response_model=chart.charts.RespSubscriptionsPost,
+)
 PORT_CLIENTS_ME_GET = Endpoint(
     "port/v1/clients/me", HttpMethod.GET, Dimension.PortfolioMinute, response_model=port.clients.MeRes
 )

@@ -13,30 +13,30 @@ from .. import enum as e
 # from decimal import Decimal
 
 
-class ClosedPositionReq(c.SaxobankModel, c.ODataRequest):
+class ClosedPositionReq(c._SaxobankModel, c.ODataRequest):
     ClientKey: c.ClientKey
 
 
-class ClosedPositionRes(c.SaxobankModel, c.ODataResponse):
+class ClosedPositionRes(c._SaxobankModel, c.ODataResponse):
     Data: list[ClosedPositionResponse]
 
 
 # Not fully covered
-class ClosedPosition(c.SaxobankModel):
+class ClosedPosition(c._SaxobankModel):
     AssetType: e.AssetType
 
 
-class ClosedPositionRequest(c.SaxobankModel):
+class ClosedPositionRequest(c._SaxobankModel):
     ClientKey: c.ClientKey
 
 
-class PostSubscriptionReq(c.CreateSubscriptionRequest):
+class PostSubscriptionReq(c._ReqCreateSubscription):
     top: N[int] = Field(alias="$top")
     Arguments: N[ClosedPositionRequest]
 
 
 # Not fully covered
-class ClosedPositionResponse(c.SaxobankModel):
+class ClosedPositionResponse(c._SaxobankModel):
     ClosedPositionUniqueId: str
     NetPositionId: N[str]
     ClosedPosition: N[ClosedPosition]
@@ -49,11 +49,11 @@ class ClosedPositionResponse(c.SaxobankModel):
             return False
 
 
-class ListResultClosedPositionResponse(c.SaxobankModel, c.ODataResponse):
+class ListResultClosedPositionResponse(c._SaxobankModel, c.ODataResponse):
     Data: List[ClosedPositionResponse]
 
 
-class PostSubscriptionRes(c.SubscriptionsResModel):
+class PostSubscriptionRes(c._RespCreateSubscription):
     Snapshot: ListResultClosedPositionResponse
 
 

@@ -12,13 +12,13 @@ from typing import Optional as N
 # from . import enums as e
 
 
-# class ReqOrderActivities(SaxobankModel):
+# class ReqOrderActivities(_SaxobankModel):
 #     FromDateTime: N[datetime]
 #     ToDateTime: N[datetime]
 #     # Status: N[e.OrderType]
 
 
-# class ResOrderActivities(SaxobankModel):
+# class ResOrderActivities(_SaxobankModel):
 #     PositionId: str
 #     OrderId: str
 #     AssetType: e.AssetType

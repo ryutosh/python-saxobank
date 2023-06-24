@@ -9,13 +9,13 @@ from typing import Optional as N
 from pydantic import conint
 
 from .. import enum as e
-from ..common import ODataRequest, ODataResponse, SaxobankModel
+from ..common import ODataRequest, ODataResponse, _SaxobankModel
 
 
 # ****************************************************************
 # SubModels
 # ****************************************************************
-class ExchangeSummaryResponse(SaxobankModel):
+class ExchangeSummaryResponse(_SaxobankModel):
     Name: N[str]
     CountryCode: N[str]
     ExchangeId: N[str]
@@ -23,30 +23,30 @@ class ExchangeSummaryResponse(SaxobankModel):
     TimeZoneId: N[str]
 
 
-class OrderDistancesResponse(SaxobankModel):
+class OrderDistancesResponse(_SaxobankModel):
     EntryDefaultDistance: float
     EntryDefaultDistanceType: e.OrderDistanceType
     StopLossDefaultDistance: float
     StopLossDefaultDistanceType: e.OrderDistanceType
 
 
-class PriceDisplayFormatResponse(SaxobankModel):
+class PriceDisplayFormatResponse(_SaxobankModel):
     OrderDecimals: conint(ge=0)
     Format: N[e.PriceDisplayFormatType]
     PriceCurrency: N[str]
 
 
-class SupportedOrderTypeSettingResponse(SaxobankModel):
+class SupportedOrderTypeSettingResponse(_SaxobankModel):
     DurationTypes: list[e.OrderDurationType]
     OrderType: e.PlaceableOrderType
 
 
-class TickSizeSchemeElementResponse(SaxobankModel):
+class TickSizeSchemeElementResponse(_SaxobankModel):
     HighPrice: Decimal
     TickSize: Decimal
 
 
-class TickSizeSchemeResponse(SaxobankModel):
+class TickSizeSchemeResponse(_SaxobankModel):
     DefaultTickSize: Decimal
     Elements: list[TickSizeSchemeElementResponse]
 
@@ -54,7 +54,7 @@ class TickSizeSchemeResponse(SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class InstrumentsDetailsRequest(SaxobankModel, ODataRequest):
+class InstrumentsDetailsRequest(_SaxobankModel, ODataRequest):
     AssetTypes: N[list[e.AssetType]]
     Uics: N[list[int]]
     FieldGroups: N[list[e.InstrumentFieldGroup]]
@@ -66,7 +66,7 @@ class InstrumentsDetailsRequest(SaxobankModel, ODataRequest):
 # ****************************************************************
 # Response Main Models
 # ****************************************************************
-class InstrumentsDetails(SaxobankModel):
+class InstrumentsDetails(_SaxobankModel):
     # ErrorInfo
     # ErrorCode: N[str]
     # Message: N[str]
@@ -101,5 +101,5 @@ class InstrumentsDetails(SaxobankModel):
     TickSizeStopOrder: N[Decimal]
 
 
-class InstrumentsDetailsResponse(SaxobankModel, ODataResponse):
+class InstrumentsDetailsResponse(_SaxobankModel, ODataResponse):
     Data: list[InstrumentsDetails]

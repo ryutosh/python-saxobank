@@ -1,12 +1,11 @@
-import asyncio
 import json
-from collections import UserDict
-from contextlib import asynccontextmanager
+
+# from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from functools import lru_cache
+from functools import lru_cache, partialmethod
 from types import TracebackType
-from typing import Any, Coroutine, Iterable, Literal, Optional, Type, Union
+from typing import Any, Coroutine, Literal, Optional, Type, Union
 from urllib.parse import urljoin
 
 import aiohttp
@@ -16,9 +15,9 @@ from . import endpoint, exception
 from .common import auth_header
 from .environment import WsBaseUrl
 from .model import streaming as model_streaming
-from .model.common import ContextId, ReferenceId, ResponseCode, SaxobankModel
+from .model.common import ContextId, ReferenceId, ResponseCode, _SaxobankModel
 from .model.enum import HeartbeatReason
-from .subscription import Subscriptions
+from .subscription import Subscription, Subscriptions
 
 # from .subscription import PortClosedPositions
 from .user_session import UserSession
@@ -133,23 +132,19 @@ class Streaming:
     def _empty(self) -> bool:
         return len(self._ws_resp._reader) == 0
 
-    def _purge_subscriptions(self, reference_ids: Iterable[ReferenceId]) -> None:
-        for ref in reference_ids:
-            self._subscriptions.remove(ref)
-
     def _handle_reset_subscriptions(self, payload: Any) -> Exception:
         reset_subscriptions = model_streaming.ResResetSubscriptions.parse_obj(payload)
 
+        if reset_subscriptions.TargetReferenceIds:
+            self._subscriptions.remove_items(reference_ids=reset_subscriptions.TargetReferenceIds)
+            return self._return_or_raise(exception.ResetSubscriptionsError(reset_subscriptions.TargetReferenceIds))
+
         # All reference ids are required to reset if no TargetReferenceIds set.
-        need_resets = (
-            set(reset_subscriptions.TargetReferenceIds)
-            if reset_subscriptions.TargetReferenceIds
-            else self._subscriptions.reference_ids
-        )
-        self._purge_subscriptions(need_resets)
+        need_resets = self._subscriptions.reference_ids()
+        self._subscriptions.clear()
         return self._return_or_raise(exception.ResetSubscriptionsError(need_resets))
 
-    async def receive(self) -> Union[DataMessage, Exception]:
+    async def receive(self) -> Union[_SaxobankModel, Exception]:
         while True:
             timestamp_of_empty = datetime.now(tz=timezone.utc)
 
@@ -169,7 +164,7 @@ class Streaming:
 
                 permanently_disables = heartbeat.filter_reasons([HeartbeatReason.SubscriptionPermanentlyDisabled])
                 if permanently_disables:
-                    self._purge_subscriptions(permanently_disables)
+                    self._subscriptions.remove_items(reference_ids=permanently_disables)
                     return self._return_or_raise(exception.SubscriptionPermanentlyDisabledError(permanently_disables))
 
             elif ref_id == self._REF_ID_RESETSUBSCRIPTIONS:
@@ -178,17 +173,22 @@ class Streaming:
             elif ref_id == self._REF_ID_DISCONNECT:
                 return self._return_or_raise(exception.StreamingDisconnectError())
 
-            # trash data message of Reference ID that's not under observation
-            subscription = self._subscriptions.get(ref_id)
-            if not subscription:
+            try:
+                subscription = self._subscriptions.get(ref_id)
+            except KeyError:
+                # trash data message of Reference ID that's not under observation
                 continue
 
-            await subscription.apply_delta(subscription.delta_model.parse_obj(payload))
+            await subscription.wait_preparation()
+            snapshot = subscription.apply_delta(payload)
             subscription.extend_timeout()
 
-            return await subscription.snapshot()
+            if not snapshot:
+                continue
 
-    async def __anext__(self) -> Union[DataMessage, Exception]:
+            return snapshot
+
+    async def __anext__(self) -> Union[_SaxobankModel, Exception]:
         if self._ws_resp.closed:
             raise StopAsyncIteration
         return await self.receive()
@@ -221,12 +221,12 @@ class Streaming:
 @dataclass(frozen=True)
 class _CreateSubscriptionResponse:
     code: ResponseCode
-    reference_id: Optional[ReferenceId]
-    snapshot: Optional[SaxobankModel]
-    next_request: Optional[Coroutine]
-    inactivity_timeout: Optional[int]
-    format: Optional[int]
-    refresh_rate: Optional[int]
+    reference_id: Optional[ReferenceId] = None
+    snapshot: Optional[_SaxobankModel] = None
+    next_request: Optional[Coroutine] = None
+    inactivity_timeout: Optional[int] = None
+    format: Optional[int] = None
+    refresh_rate: Optional[int] = None
 
 
 class StreamingSession:
@@ -270,28 +270,37 @@ class StreamingSession:
 
     async def create_subscription_request(
         self,
+        request_job: Coroutine,
         reference_id: Optional[ReferenceId],
-        arguments: Optional[SaxobankModel],
-        replace_reference_id: Optional[ReferenceId],
-        format: Optional[str],
-        refresh_rate: Optional[int],
+        # format: Optional[str],
+        # refresh_rate: Optional[int],
         tag: Optional[str],
-    ):
+        # replace_reference_id: Optional[ReferenceId],
+        # arguments: Optional[SaxobankModel],
+    ) -> _CreateSubscriptionResponse:
         # assert self.streaming
-        reference_id = reference_id
+        if not reference_id:
+            reference_id = ReferenceId()
 
-        subscription = ChartsSubscription(reference_id)
+        subscription = Subscription(reference_id, tag)
         self._subscriptions.add(subscription)
 
-        req = endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_POST.request_model(
-            ContextId=self.context_id, ReferenceId=reference_id, Format=format, Arguments=arguments
-        )
+        # req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST.request_model(
+        #     ContextId=self.context_id,
+        #     ReferenceId=reference_id,
+        #     Format=format,
+        #     RefreshRate=refresh_rate,
+        #     Tag=tag,
+        #     ReplaceReferenceId=replace_reference_id,
+        #     Arguments=arguments,
+        # )
 
-        res = await self._user_session.chart_charts_subscription_post(req)
+        # res = await self._user_session.chart_charts_subscription_post(req)
+        res = await request_job
 
         if res.code.is_error:
-            self._subscriptions.remove(subscription)
-            return _CreateSubscriptionResponse(res.code, None, None, None, None, None, None)
+            self._subscriptions.discard(subscription)
+            return _CreateSubscriptionResponse(res.code)
 
         is_odata, next_callback = self._user_session.is_odata_response(res.model)
         snapshot = res.model.Snapshot.Data if is_odata else res.model.Snapshot
@@ -304,13 +313,27 @@ class StreamingSession:
     async def chart_charts_subscription_post(
         self,
         reference_id: Optional[ReferenceId],
-        arguments: Optional[SaxobankModel],
-        replace_reference_id: Optional[ReferenceId],
+        tag: Optional[str],
         format: Optional[str],
         refresh_rate: Optional[int],
-        tag: Optional[str],
-    ):
-        return self.create_subscription_request(self, reference_id, arguments, replace_reference_id, format, refresh_rate, tag)
+        replace_reference_id: Optional[ReferenceId],
+        arguments: Optional[_SaxobankModel],
+    ) -> _CreateSubscriptionResponse:
+        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST.request_model(
+            ContextId=self.context_id,
+            ReferenceId=reference_id,
+            Tag=tag,
+            Format=format,
+            RefreshRate=refresh_rate,
+            ReplaceReferenceId=replace_reference_id,
+            Arguments=arguments,
+        )
+        coro = self._user_session.chart_charts_subscription_post(req)
+        return await self.create_subscription_request(coro, reference_id, tag)
+
+    async def chart_charts_subscription_delete(self, reference_id):
+        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE.request_model(ContextId=self.context_id, ReferenceId=reference_id)
+        return await self._user_session.chart_charts_subscription_delete(req)
 
     # async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:
     #     req = Endpoint.PORT_DELETE_CLOSEDPOSITIONS_SUBSCRIPTION_CONTEXTID, RequestModel(

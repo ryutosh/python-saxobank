@@ -15,12 +15,12 @@ from . import port
 # ****************************************************************
 
 
-class CommissionsResponse(SaxobankModel):
+class CommissionsResponse(_SaxobankModel):
     CostBuy: Decimal
     CostSell: Decimal
 
 
-class DisplayAndFormatResponse(SaxobankModel):
+class DisplayAndFormatResponse(_SaxobankModel):
     Currency: str
     Decimals: int
     Description: str
@@ -29,23 +29,23 @@ class DisplayAndFormatResponse(SaxobankModel):
     Symbol: str
 
 
-# class ErrorInfo(SaxobankModel):
+# class ErrorInfo(_SaxobankModel):
 #     ErrorCode: str
 #     Message: str
 #     ModelState: N[Any]
 
 
-class InstrumentPriceDetailsResponse(SaxobankModel):
+class InstrumentPriceDetailsResponse(_SaxobankModel):
     IsMarketOpen: bool
     ShortTradeDisabled: bool
 
 
-class PriceInfoResponse(SaxobankModel):
+class PriceInfoResponse(_SaxobankModel):
     High: N[Decimal]
     Low: N[Decimal]
 
 
-class PriceInfoDetailsResponse(SaxobankModel):
+class PriceInfoDetailsResponse(_SaxobankModel):
     Open: N[Decimal]
     LastTraded: N[Decimal]
     LastTradedSize: N[Decimal]
@@ -53,7 +53,7 @@ class PriceInfoDetailsResponse(SaxobankModel):
     Volume: N[Decimal]
 
 
-class QuoteResponse(SaxobankModel):
+class QuoteResponse(_SaxobankModel):
     Ask: N[Decimal]
     Bid: N[Decimal]
     Mid: N[Decimal]
@@ -67,7 +67,7 @@ class QuoteResponse(SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class InfoPricesRequest(SaxobankModel):
+class InfoPricesRequest(_SaxobankModel):
     AccountKey: N[AccountKey]
     AssetType: e.AssetType
     Uic: int
@@ -79,7 +79,7 @@ class InfoPricesRequest(SaxobankModel):
 
 # TODO: Not full covered
 # https://www.developer.saxo/openapi/referencedocs/trade/v2/orders/placeorder/b60736b842c31bacab7ae7097512654b
-class OrdersRequest(SaxobankModel):
+class OrdersRequest(_SaxobankModel):
     AccountKey: N[AccountKey]
     PositionId: N[str]
     OrderId: N[str]
@@ -139,17 +139,17 @@ class OrdersRequest(SaxobankModel):
 # ****************************************************************
 # Response Main Models
 # ****************************************************************
-class ErrorResponse(SaxobankModel):
+class ErrorResponse(_SaxobankModel):
     ErrorInfo: ErrorInfo
 
 
-# class InfoPricesErrorResponse(SaxobankModel):
+# class InfoPricesErrorResponse(_SaxobankModel):
 #     ErrorCode: str
 #     Message: str
 #     ModelState: N[Any]
 
 
-class InfoPricesResponse(SaxobankModel):
+class InfoPricesResponse(_SaxobankModel):
     AssetType: N[e.AssetType]
     Uic: N[int]
     ErrorInfo: N[ErrorInfo]
@@ -163,7 +163,7 @@ class InfoPricesResponse(SaxobankModel):
     Quote: N[QuoteResponse]
 
 
-class OrdersResponse(SaxobankModel):
+class OrdersResponse(_SaxobankModel):
     ErrorInfo: N[ErrorInfo]
     ExternalReference: N[str]
     OrderId: N[str]

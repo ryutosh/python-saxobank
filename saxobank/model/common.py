@@ -4,7 +4,7 @@ import string
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum, auto, unique
-from typing import Any, Final, List, Optional, Tuple, Type, Union
+from typing import Any, Container, Final, List, Literal, Optional, Tuple, Type, Union, cast
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -99,23 +99,72 @@ class ResponseCode(Enum):
         return 400 <= self.value
 
 
-class SaxobankModel(BaseModel):
-    def apply_delta(self, delta: SaxobankModel):
-        d = self.dict()
-        d.update(delta.dict(exclude_unset=True))
-        return delta.__class__(**d)
+class _SaxobankModel(BaseModel):
+    def __hash__(self) -> int:
+        return hash(id(self))
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, self.__class__):
+            return False
+        return hash(self) == hash(o)
 
     def path_items(self) -> dict[str, Any]:
         return {}
 
-    def dict(self, **kwargs) -> dict:
-        return super().dict(exclude_unset=True, exclude_none=True, **kwargs)
+    def as_request(self, **kwargs: Any) -> dict:
+        kwargs.update({"exclude_unset": True, "exclude_none": True})
+        return super().dict(**kwargs)
 
-    def as_request(self, **kwargs) -> dict:
-        return super().dict(exclude_unset=True, exclude_none=True, **kwargs)
+    def dict_lower_case(self, **kwargs: Any) -> dict:
+        kwargs.update({"by_alias": True, "exclude_unset": True, "exclude_none": True})
+        return super().dict(**kwargs)
 
-    def dict_lower_case(self, **kwargs) -> dict:
-        return super().dict(by_alias=True, exclude_unset=True, exclude_none=True, **kwargs)
+    def merge(self, delta: _SaxobankModel) -> _SaxobankModel:
+        new = self.dict(exclude_unset=True)
+        for key, value in delta.dict().items():
+            # if isinstance(value, _SaxobankModel):
+            print(f"processing key:{key} and value:{value}")
+            delta_field = getattr(delta, key)
+            if isinstance(delta_field, _SaxobankModel):
+                if hasattr(self, key):
+                    new[key] = getattr(self, key).merge(delta_field)
+                else:
+                    new[key] = delta_field
+            elif isinstance(delta_field, list):
+                if hasattr(self, key):
+                    new[key] = list(set(getattr(self, key)) | set(delta_field))
+                else:
+                    new[key] = delta_field
+                # if hasattr(self, key):
+                #     base_field = getattr(self, key)
+                #     for inner in delta_field:
+                #         if inner in base_field:
+            elif value is not None:
+                new[key] = value
+
+        return self.__class__(**new)
+
+    # def update(self, value: Any, key: Optional[str] = None) -> None:
+    #     if isinstance(value, _SaxobankModel):
+    #         cast(_SaxobankModel, value)
+    #         # for inner_key, inner_value in value.__fields__.items():
+    #         for inner_key, inner_value in value:
+    #             # if isinstance(inner_value, _SaxobankModel):
+    #             #     d[inner_key] = self.merge(inner_value)
+    #             # else:
+    #             #     d[inner_key] = inner_value
+    #             self.update(inner_value, inner_key)
+    #     elif key:
+    #         try:
+    #             print(f"processing on key:{key} and value:{value}")
+    #             # self.__fields__[key] = value
+
+    #             # self.__setattr__(key, value)
+    #             setattr(self, key, value)
+
+    #         except Exception as ex:
+    #             print(ex)
+    #             print(f"error at key:{key} and value:{value}")
 
     class Config:
         arbitrary_types_allowed = True
@@ -124,13 +173,13 @@ class SaxobankModel(BaseModel):
         allow_population_by_field_name = True
 
 
-class ErrorResponse(SaxobankModel):
+class ErrorResponse(_SaxobankModel):
     ErrorCode: str
     Message: str
     ModelState: Optional[Any]
 
 
-class ListResultModel(SaxobankModel):
+class ListResultModel(_SaxobankModel):
     count: Optional[int] = Field(alias="__count")
     next: HttpUrl = Field(alias="__next")
     MaxRows: Optional[int]
@@ -151,22 +200,51 @@ class ListResultModel(SaxobankModel):
         return copy
 
 
-class SubscriptionsResModel(SaxobankModel):
+class _Snapshot(_SaxobankModel):
+    Snapshot: _SaxobankModel
+
+    def apply_delta(self, delta: _SaxobankModel) -> _SaxobankModel:
+        d = self.dict()
+        d.update(delta.dict(exclude_unset=True))
+        return self.__class__(**d)
+
+
+class _RespCreateSubscription(_SaxobankModel):
     ContextId: ContextId
-    Format: str
-    InactivityTimeout: int
     ReferenceId: ReferenceId
+    State: Literal["Active"]
+    InactivityTimeout: int
+    Format: str
     RefreshRate: int
-    # Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
-    State: str
     Tag: str
+    Snapshot: _Snapshot
+    # Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
 
 
-# class SubscriptionSnapshotModel(SaxobankModel):
+# class SubscriptionSnapshotModel(_SaxobankModel):
 #     def apply_delta(self, delta: SubscriptionSnapshotModel):
 #         d = self.dict()
 #         d.update(delta.dict(exclude_unset=True))
 #         return delta.__class__(**d)
+
+
+class _RespPartedStreaming(_SaxobankModel):
+    ReferenceId: ReferenceId
+    Data: _SaxobankModel
+    Timestamp: datetime
+    TotalPartition: Optional[int]
+    PartitionNumber: Optional[int]
+
+
+# class _SnapshotPartedMixin:
+#     def __init__(self, *args: Any, **kwargs: Any) -> None:
+#         self._parted_delta: SaxobankModel = None
+#         super().__init__(*args, **kwargs)
+
+#     def apply_delta(delta: _SaxobankModel):
+#         if delta.PartitionNumber is not None:
+#             self._
+#         self._parted_delta.apply_delta(delta)
 
 
 class InlineCountValue(Enum):
@@ -178,16 +256,21 @@ class InlineCountValue(Enum):
     NONE = "None"  # The results will not contain an inline count.
 
 
-class CreateSubscriptionRequest(SaxobankModel):
+class _ReqCreateSubscription(_SaxobankModel):
     ContextId: ContextId
     ReferenceId: ReferenceId
-    ReplaceReferenceId: Optional[ReferenceId]
+    Tag: Optional[str]
     Format: Optional[str]
     RefreshRate: Optional[int]
-    Tag: Optional[str]
+    ReplaceReferenceId: Optional[ReferenceId]
 
 
-class OrderDuration(SaxobankModel):
+class _ReqRemoveSubscription(_SaxobankModel):
+    ContextId: ContextId
+    ReferenceId: ReferenceId
+
+
+class OrderDuration(_SaxobankModel):
     DurationType: e.OrderDurationType
     ExpirationDateContainsTime: Optional[bool]
     ExpirationDateTime: Optional[datetime]

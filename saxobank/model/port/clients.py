@@ -1,16 +1,16 @@
 # from datetime import datetime
 from __future__ import annotations
 
-from .. import common as c
-from .. import enum as e
+from .. import common as _c
+from .. import enum as _e
 
 # from urllib.parse import quote
 
 
-class MeRes(c.SaxobankModel):
+class MeRes(_c._SaxobankModel):
     ClientId: str
-    ClientKey: c.ClientKey
+    ClientKey: _c.ClientKey
     DefaultAccountId: str
-    DefaultAccountKey: c.AccountKey
-    PositionNettingMode: e.ClientPositionNettingMode
-    PositionNettingProfile: e.ClientPositionNettingProfile
+    DefaultAccountKey: _c.AccountKey
+    PositionNettingMode: _e.ClientPositionNettingMode
+    PositionNettingProfile: _e.ClientPositionNettingProfile
