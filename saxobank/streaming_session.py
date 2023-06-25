@@ -68,7 +68,7 @@ class DataMessage:
         return bytes[index : index + size]
 
     @property
-    def __payload_size(self) -> int:
+    def _payload_size(self) -> int:
         return self.__parse_int(
             self.__cut(
                 self.message, self.__LAYOUT_PAYLOAD_SIZE.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_SIZE.SIZE
@@ -87,14 +87,14 @@ class DataMessage:
     def payload(self) -> Any:
         return (
             self.__parse_json(
-                self.__cut(self.message, self.__LAYOUT_PAYLOAD.INDEX + self.__payload_size, self.__LAYOUT_PAYLOAD.SIZE)
+                self.__cut(self.message, self.__LAYOUT_PAYLOAD.INDEX + self.__reference_id_size, self._payload_size)
             )
-            if self.payload_fmt == self.__PAYLOAD_FORMAT_JSON
+            if self._payload_fmt == self.__PAYLOAD_FORMAT_JSON
             else None  # ProtoBuf(Not supported because un-documented at Saxobank.)
         )
 
     @property
-    def payload_fmt(self) -> int:
+    def _payload_fmt(self) -> int:
         return self.__parse_int(
             self.__cut(
                 self.message, self.__LAYOUT_PAYLOAD_FORMAT.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_FORMAT.SIZE
@@ -159,7 +159,9 @@ class Streaming:
             payload = message.payload
 
             if ref_id == self._REF_ID_HEARTBEAT:
-                heartbeat = model_streaming.ResHeartbeat.parse_obj(payload)
+                # heartbeat = model_streaming.ResHeartbeat.parse_obj(payload)
+                heartbeat = model_streaming.ResHeartbeat.parse_obj(payload[0])
+                print(f"heartbeat {heartbeat}")
                 self._subscriptions.extend_timeout([h.OriginatingReferenceId for h in heartbeat.Heartbeats])
 
                 permanently_disables = heartbeat.filter_reasons([HeartbeatReason.SubscriptionPermanentlyDisabled])
@@ -271,10 +273,10 @@ class StreamingSession:
     async def create_subscription_request(
         self,
         request_job: Coroutine,
-        reference_id: Optional[ReferenceId],
+        reference_id: ReferenceId,
         # format: Optional[str],
         # refresh_rate: Optional[int],
-        tag: Optional[str],
+        tag: Optional[str] = None,
         # replace_reference_id: Optional[ReferenceId],
         # arguments: Optional[SaxobankModel],
     ) -> _CreateSubscriptionResponse:
@@ -312,15 +314,16 @@ class StreamingSession:
 
     async def chart_charts_subscription_post(
         self,
-        reference_id: Optional[ReferenceId],
-        tag: Optional[str],
-        format: Optional[str],
-        refresh_rate: Optional[int],
-        replace_reference_id: Optional[ReferenceId],
-        arguments: Optional[_SaxobankModel],
+        reference_id: Optional[ReferenceId] = None,
+        tag: Optional[str] = None,
+        format: Optional[str] = None,
+        refresh_rate: Optional[int] = None,
+        replace_reference_id: Optional[ReferenceId] = None,
+        arguments: Optional[_SaxobankModel] = None,
     ) -> _CreateSubscriptionResponse:
+        reference_id = reference_id if reference_id else ReferenceId()
         req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST.request_model(
-            ContextId=self.context_id,
+            ContextId=self._context_id,
             ReferenceId=reference_id,
             Tag=tag,
             Format=format,
@@ -332,7 +335,9 @@ class StreamingSession:
         return await self.create_subscription_request(coro, reference_id, tag)
 
     async def chart_charts_subscription_delete(self, reference_id):
-        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE.request_model(ContextId=self.context_id, ReferenceId=reference_id)
+        print("called")
+        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE.request_model(ContextId=self._context_id, ReferenceId=reference_id)
+        print(f"req: {req}")
         return await self._user_session.chart_charts_subscription_delete(req)
 
     # async def closedpositions_remove_multiple_subscriptions(self, arguments) -> SaxobankModel:

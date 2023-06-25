@@ -9,13 +9,13 @@ from urllib.parse import urljoin
 
 import aiohttp
 import pydantic
+from pydantic import parse_obj_as
 
-from . import endpoint, exception
+from . import endpoint, exception, model
 from .common import auth_header
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
-from .model.common import (ErrorResponse, ODataResponse, ResponseCode,
-                           _SaxobankModel)
+from .model.common import ErrorResponse, ODataResponse, ResponseCode, _SaxobankModel
 
 
 class RateLimiter:
@@ -86,10 +86,9 @@ class UserSession:
                 code = ResponseCode(response.status)
                 json = await response.json() if response.content_type == ContentType.JSON else None
 
-            if error_response := self.error_response(code, json):
+            error_response = self.error_response(code, json)
+            if error_response:
                 return _OpenApiRequestResponse(code, error_response, None)
-
-            from pydantic import parse_obj_as
 
             # response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
             response_model = parse_obj_as(endpoint.response_model, json) if endpoint.response_model else None
@@ -124,10 +123,12 @@ class UserSession:
         if not isinstance(response_model, ODataResponse):
             return False, None
 
-        if not (next := response_model.next_request):
+        next = response_model.next_request
+        if not next:
             return True, None
 
-        if not (next_endpoint := endpoint.Endpoint.match(next.path)):
+        next_endpoint = endpoint.Endpoint.match(next.path)
+        if not next_endpoint:
             raise exception.InternalError(f"Next endpoint for {next.path} not found.")
 
         next_request_model = next_endpoint.request_model.parse_obj(next.query)

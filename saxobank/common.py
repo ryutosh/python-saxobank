@@ -9,4 +9,4 @@ def auth_header(token: str) -> Dict[str, str]:
 
 @lru_cache()
 def is_aware_datetime(target: datetime) -> bool:
-    return bool(target.tzinfo and target.tzinfo.utcoffset(target))
+    return bool(target.tzinfo is not None and target.tzinfo.utcoffset(target) is not None)

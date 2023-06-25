@@ -214,9 +214,9 @@ class _RespCreateSubscription(_SaxobankModel):
     ReferenceId: ReferenceId
     State: Literal["Active"]
     InactivityTimeout: int
-    Format: str
+    Format: Optional[str] = None
     RefreshRate: int
-    Tag: str
+    Tag: Optional[str] = None
     Snapshot: _Snapshot
     # Snapshot: Union[Type[SubscriptionSnapshotModel], Type[ListResultModel]]
 
@@ -259,10 +259,10 @@ class InlineCountValue(Enum):
 class _ReqCreateSubscription(_SaxobankModel):
     ContextId: ContextId
     ReferenceId: ReferenceId
-    Tag: Optional[str]
-    Format: Optional[str]
-    RefreshRate: Optional[int]
-    ReplaceReferenceId: Optional[ReferenceId]
+    Tag: Optional[str] = None
+    Format: Optional[str] = None
+    RefreshRate: Optional[int] = None
+    ReplaceReferenceId: Optional[ReferenceId] = None
 
 
 class _ReqRemoveSubscription(_SaxobankModel):

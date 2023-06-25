@@ -40,10 +40,10 @@ class ClientPositionNettingProfile(str, Enum):
     FifoRealTime = "FifoRealTime"
 
 
-class HeartbeatReason(Enum):
-    NoNewData = auto()
-    SubscriptionTemporarilyDisabled = auto()
-    SubscriptionPermanentlyDisabled = auto()
+class HeartbeatReason(str, Enum):
+    NoNewData = "NoNewData"
+    SubscriptionTemporarilyDisabled = "SubscriptionTemporarilyDisabled"
+    SubscriptionPermanentlyDisabled = "SubscriptionPermanentlyDisabled"
 
 
 class InfoPriceGroupSpec(str, Enum):

@@ -13,8 +13,8 @@ from .. import enum as _e
 class ChartInfo(_c._SaxobankModel):
     ExchangeId: str
     Horizon: int
-    FirstSampleTime: Optional[datetime]
-    DelayedByMinutes: Optional[int]
+    FirstSampleTime: Optional[datetime] = None
+    DelayedByMinutes: Optional[int] = None
 
 
 class ChartSample(_c._SaxobankModel):
@@ -30,7 +30,7 @@ class ChartSubscriptionRequest(_c._SaxobankModel):
     AssetType: _e.AssetType
     Uic: int
     Horizon: int
-    Count: Optional[int]
+    Count: Optional[int] = None
 
 
 class ReqSubscriptionsPost(_c._ReqCreateSubscription):
@@ -46,7 +46,7 @@ class ReqSubscriptionDelete(_c._ReqRemoveSubscription):
 # ****************************************************************
 class ChartResponse(_c._SaxobankModel):
     DataVersion: int
-    ChartInfo: ChartInfo
+    ChartInfo: Optional[ChartInfo] = None
     Data: List[ChartSample]
 
     _partitions: Set[int] = set()
