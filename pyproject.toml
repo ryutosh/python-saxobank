@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "python-saxobank"
+version = "0.1.0"
+description = "SaxoBank OpenAPI client"
+authors = ["Toshiya Miyagi <t.miyagi20150929@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "saxobank"}]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+pydantic = "^2.0"
+aiohttp = "^3.8"
+simplejson = "^3.19"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3"
+flake8 = "^5.0"  # 6.0 requires python3.8
+isort = "^5.11"  # 5.12 requires python3.8
+ipykernel = "^6.16"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4"
+pytest-asyncio = "^0.21"
+
+[tool.poetry.group.typing.dependencies]
+mypy = "^1.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

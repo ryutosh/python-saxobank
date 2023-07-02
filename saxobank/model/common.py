@@ -47,7 +47,7 @@ class ODataRequest(BaseModel):
 class ODataResponse(BaseModel):
     count: Optional[int] = Field(alias="__count")
     next: HttpUrl = Field(None, alias="__next")
-    NextRequest = namedtuple("NextRequest", ["path", "query"])
+    NextRequest: Tuple[str, str] = namedtuple("NextRequest", ["path", "query"])
 
     @property
     def next_request(self) -> Optional[NextRequest]:

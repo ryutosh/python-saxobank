@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 
 from .. import common as _c
 from .. import enum as _e
+from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
+
 
 
 # ****************************************************************
