@@ -7,7 +7,6 @@ from .. import enum as _e
 from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 
 
-
 # ****************************************************************
 # SubModels
 # ****************************************************************
@@ -28,6 +27,9 @@ class ChartSample(_c._SaxobankModel):
 # Request
 # ****************************************************************
 class ChartSubscriptionRequest(_c._SaxobankModel):
+    """Represents bellow Saxobank OpenAPI requests.
+    https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/addsubscriptionasync/dbf87ad4302f2d4289be19be8cb4a3db
+    """
     AssetType: _e.AssetType
     Uic: int
     Horizon: int

@@ -15,9 +15,12 @@ simplejson = "^3.19"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3"
-flake8 = "^5.0"  # 6.0 requires python3.8
+# flake8 = "^5.0"  # 6.0 requires python3.8
 isort = "^5.11"  # 5.12 requires python3.8
 ipykernel = "^6.16"
+mkdocs = "^1.4"
+mkdocs-material = "^9.1"
+mkdocstrings-python = "^1.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4"
@@ -25,6 +28,26 @@ pytest-asyncio = "^0.21"
 
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.4"
+
+[tool.mypy]
+show_error_codes = true
+strict = true
+strict_optional = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+# sample from pydantic
+#follow_imports = "silent"
+#warn_redundant_casts = true
+#warn_unused_ignores = true
+#disallow_any_generics = true
+#check_untyped_defs = true
+#no_implicit_reexport = true
+
+#[tool.pydantic-mypy]
+#init_forbid_extra = true
+#init_typed = true
+#warn_required_dynamic_aliases = true
 
 [build-system]
 requires = ["poetry-core"]
