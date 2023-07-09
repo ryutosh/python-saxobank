@@ -49,16 +49,22 @@ plugins:
         python:
           paths: [saxobank]
           options:
-            docstring_style: "sphinx"  # google, numpy, sphinx, or None.
-            show_if_no_docstring: true
+            # show_bases: false
+            show_source: false
+            show_category_heading: true
+            # show_symbol_type_heading: true
+            filters: ["!^_"]
             show_submodules: true
+            docstring_style: "google"
+            docstring_section_style: "table"
+            merge_init_into_class: true
+            show_if_no_docstring: true
+            annotations_path: brief
             # separate_signature: true
-            # filters: ["!^_"]
+            show_signature: false
+            show_signature_annotations: false
             # docstring_options:
             #   ignore_init_summary: true
-            # merge_init_into_class: true
-            # extensions:
-            #   - docs/plugins/griffe_doclinks.py
 
 markdown_extensions:
   - pymdownx.superfences:

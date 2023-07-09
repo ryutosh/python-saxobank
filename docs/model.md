@@ -1,6 +1,8 @@
 ::: saxobank.model
+    options:
+        show_bases: false
 
-## Chart
+<!-- ## Chart
 ::: saxobank.model.chart
-::: saxobank.model.chart.charts
+::: saxobank.model.chart.charts -->
 

@@ -11,6 +11,13 @@ from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 # SubModels
 # ****************************************************************
 class ChartInfo(_c._SaxobankModel):
+    """Represents ChartInfo.
+    Attributes:
+        ExchangeId: Id of the Exchange. Go to the ReferenceData/Exhanges endpoint to get exchange session info.
+        Horizon: Horizon in minutes.
+        FirstSampleTime: The time of the first (oldest) available sample available for this instrument. Useful for the client when calculating the size of the horizontal slider.
+        DelayedByMinutes: If the pricefeed is delayed, this field will be returned indicating the delay in minutes.
+    """
     ExchangeId: str
     Horizon: int
     FirstSampleTime: Optional[datetime] = None

@@ -5,8 +5,10 @@ __pycache__
 *.pyc
 *.pyo
 
-# settings
-winko.toml
+# tests
+/htmlcov/
+.coverage
+
 
 # credentials
 *.crt
@@ -22,6 +24,7 @@ winko.toml
 # development
 *.code-workspace
 .jupyter
+.ipynb_checkpoints
 
 # develop enviroments
 env/

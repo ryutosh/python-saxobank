@@ -58,7 +58,20 @@ class UserSession:
         endpoint: endpoint.Endpoint,
         request_model: _SaxobankModel | None = None,
         access_token: str | None = None,
-    ) -> _OpenApiRequestResponse:  # Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
+    ) -> _OpenApiRequestResponse:
+        """Dispatch passed request_model to OpenAPI endpoint.
+        Args:
+            endpoint: OpenAPI endpoint to request.
+        
+        Raises:
+            ResponseError: OpenAPI response was invalid.
+            HttpClientError: if connection error.
+        
+        Returns:
+            _OpenApiRequestResponse: tuple of ResponseCode and Returned model and next request coroutine if response has next.
+
+        """
+        # ->  Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         url = urljoin(self.base_url, endpoint.url(request_model.path_items() if request_model else None))
         params = request_model.dict_lower_case() if request_model and endpoint.method == HttpMethod.GET else None
         data = request_model.dict() if request_model and endpoint.method != HttpMethod.GET else None
