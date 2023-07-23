@@ -34,7 +34,28 @@
 - However it's also ok to tweak connector among brokers, but separate it for connection requirements might differ by brokers.
 - Use same connector for multiple session.
 
-## Request/Response
+# Request/Response
+## Model Naming
+OpenAPI endpoint URLs are basically in form "/servicegroup/version/service/endpoint?queries".
+### Request models naming
+Request models are layored in package and named as like;
+- servicegroup.service.[Method]Endpoint[Req][IdenticalDescriptionIfDuplicate]
+- Remove path parameters.
+- Only [Method][Req] if no endpoint in URL.
+```python
+# mkt/v2/instruments/{Uic}/{AssetType}/documents/recommended/?DocumentTypes={DocumentTypes}
+mkt.instruments_v2.GetDocumentsRecommendedReq
+```
+### Response models naming
+Response models are named;
+- Same as Request model but substitute [Req] to [Resp].
+
+### Compositions in models
+Request/Response models are composed from several composit models.
+Saxobank OpenAPI reference describes about meaning about these composits with JSON field names.
+These models are named;
+- Same name with JSON field.
+
 ### Access Limiting
 RFCを参考にしていると思われるので参考に
 https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers

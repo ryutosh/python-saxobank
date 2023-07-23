@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 
-from ..base import SaxobankModel
+from ..base import SaxobankModel, SaxobankRootModel
+from ..common import AssetType, ChartRequestMode
 
 
 # ****************************************************************
@@ -29,14 +30,34 @@ class ChartSample(SaxobankModel):
     Time: datetime
 
 
+class Data(SaxobankRootModel):
+    root: List[ChartSample]
+
+
 # ****************************************************************
 # Request
 # ****************************************************************
+class GetReq(SaxobankModel):
+    AssetType: AssetType
+    Uic: int
+    Horizon: int
+    Mode: ChartRequestMode
+    Count: Optional[int]
+
+    def __init__(self, asset_type: AssetType, uic: int, horizon: int, mode: ChartRequestMode, count: Optional[int] = None):
+        self.AssetType = asset_type
+        self.Uic = uic
+        self.Horizon = horizon
+        self.Mode = mode
+        self.Count = count
+
+
+
 class ChartSubscriptionRequest(SaxobankModel):
     """Represents bellow Saxobank OpenAPI requests.
     https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/addsubscriptionasync/dbf87ad4302f2d4289be19be8cb4a3db
     """
-    AssetType: _e.AssetType
+    AssetType: AssetType
     Uic: int
     Horizon: int
     Count: Optional[int] = None
@@ -53,14 +74,42 @@ class ReqSubscriptionDelete(_c._ReqRemoveSubscription):
 # ****************************************************************
 # Response
 # ****************************************************************
-class ChartResponse(SaxobankModel):
-    DataVersion: int
+class GetResp(SaxobankModel):
+    """Represents conposit model.
+
+    Attributes descriptions are referenced from [OpenAPI Reference]: https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/getchartdataasync/387cfc61d3292d9237095b9144ac4733/.
+
+    Attributes:
+        Data: Array holding the individual OHLC samples. For Forex Instruments both Bid and Ask values are returned. For other instruments the values are the last traded values.
+
+
+
+    """
+
     ChartInfo: Optional[ChartInfo] = None
-    Data: List[ChartSample]
+    Data: Data
+    DataVersion: int
 
     _partitions: Set[int] = set()
 
     def apply_delta(self, delta: Any) -> Tuple[ChartResponse, bool]:
+        """Example function with types documented in the docstring.
+
+        `PEP 484`_ type annotations are supported. If attribute, parameter, and
+        return types are annotated according to `PEP 484`_, they do not need to be
+        included in the docstring:
+
+        Args:
+            param1 (int): The first parameter.
+            param2 (str): The second parameter.
+
+        Returns:
+            bool: The return value. True for success, False otherwise.
+
+        .. _PEP 484:
+            https://www.python.org/dev/peps/pep-0484/
+
+        """
         if not isinstance(delta, SaxobankModel):
             delta = RespSubscriptionsStreaming.parse_obj(delta)
 

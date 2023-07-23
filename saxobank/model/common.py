@@ -35,6 +35,10 @@ class BuySell(str, Enum):
         return self.Sell if self == self.Buy else self.Buy
 
 
+class ChartRequestMode(str, Enum):
+    From = 'From'
+    UpTo = 'UpTo'
+
 class ClientPositionNettingMode(str, Enum):
     EndOfDay = "EndOfDay"
     Intraday = "Intraday"

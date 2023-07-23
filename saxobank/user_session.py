@@ -15,7 +15,8 @@ from . import endpoint, exception, model
 from .common import auth_header
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
-from .model.common import ErrorResponse, ODataResponse, ResponseCode, SaxobankModel
+from .model.common import (ErrorResponse, ODataResponse, ResponseCode,
+                           SaxobankModel)
 
 
 class RateLimiter:
@@ -62,11 +63,11 @@ class UserSession:
         """Dispatch passed request_model to OpenAPI endpoint.
         Args:
             endpoint: OpenAPI endpoint to request.
-        
+
         Raises:
             ResponseError: OpenAPI response was invalid.
             HttpClientError: if connection error.
-        
+
         Returns:
             _OpenApiRequestResponse: tuple of ResponseCode and Returned model and next request coroutine if response has next.
 
@@ -165,3 +166,4 @@ class UserSession:
 
     # Root
     root_sessions_capabilities_put = partialmethod(openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT)
+
