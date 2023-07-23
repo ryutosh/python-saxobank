@@ -7,7 +7,7 @@ from .. import enum as _e
 # from urllib.parse import quote
 
 
-class MeRes(_c.SaxobankModel):
+class MeRes(SaxobankModel):
     ClientId: str
     ClientKey: _c.ClientKey
     DefaultAccountId: str

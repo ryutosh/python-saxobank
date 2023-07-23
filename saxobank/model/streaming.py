@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Container
-from typing import List, Literal, Optional, Set, Sequence
+from typing import List, Literal, Optional, Sequence, Set
 
-from .common import ContextId, ReferenceId, SaxobankModel, SaxobankRootModel
-from .enum import HeartbeatReason
+from .base import SaxobankModel, SaxobankRootModel
+from .common import ContextId, HeartbeatReason, ReferenceId
+
 # from dataclasses import dataclass
 
 # @dataclass

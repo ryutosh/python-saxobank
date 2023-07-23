@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-
-from .. import common as _c
-from .. import enum as _e
 from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
+
+from ..base import SaxobankModel
 
 
 # ****************************************************************
 # SubModels
 # ****************************************************************
-class ChartInfo(_c.SaxobankModel):
+class ChartInfo(SaxobankModel):
     """Represents ChartInfo.
     Attributes:
         ExchangeId: Id of the Exchange. Go to the ReferenceData/Exhanges endpoint to get exchange session info.
@@ -24,7 +23,7 @@ class ChartInfo(_c.SaxobankModel):
     DelayedByMinutes: Optional[int] = None
 
 
-class ChartSample(_c.SaxobankModel):
+class ChartSample(SaxobankModel):
     CloseAsk: float
     CloseBid: float
     Time: datetime
@@ -33,7 +32,7 @@ class ChartSample(_c.SaxobankModel):
 # ****************************************************************
 # Request
 # ****************************************************************
-class ChartSubscriptionRequest(_c.SaxobankModel):
+class ChartSubscriptionRequest(SaxobankModel):
     """Represents bellow Saxobank OpenAPI requests.
     https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/addsubscriptionasync/dbf87ad4302f2d4289be19be8cb4a3db
     """
@@ -54,7 +53,7 @@ class ReqSubscriptionDelete(_c._ReqRemoveSubscription):
 # ****************************************************************
 # Response
 # ****************************************************************
-class ChartResponse(_c.SaxobankModel):
+class ChartResponse(SaxobankModel):
     DataVersion: int
     ChartInfo: Optional[ChartInfo] = None
     Data: List[ChartSample]
@@ -62,7 +61,7 @@ class ChartResponse(_c.SaxobankModel):
     _partitions: Set[int] = set()
 
     def apply_delta(self, delta: Any) -> Tuple[ChartResponse, bool]:
-        if not isinstance(delta, _c.SaxobankModel):
+        if not isinstance(delta, SaxobankModel):
             delta = RespSubscriptionsStreaming.parse_obj(delta)
 
         if delta.PartitionNumber:

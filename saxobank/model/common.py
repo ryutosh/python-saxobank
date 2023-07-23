@@ -6,10 +6,6 @@ from enum import Enum, auto, unique
 from typing import Any, Optional
 from uuid import uuid4
 
-from .base import SaxobankModel
-from . import enum as e
-
-
 
 # TODO: Not full covered
 class AssetType(str, Enum):
@@ -321,12 +317,6 @@ class ResponseCode(Enum):
 
 
 
-class ErrorResponse(SaxobankModel):
-    ErrorCode: str
-    Message: str
-    ModelState: Optional[Any]
-
-
 class InlineCountValue(Enum):
     """
     Defines an enumeration for $inlinecount query option values.
@@ -337,10 +327,3 @@ class InlineCountValue(Enum):
 
 
 
-class OrderDuration(SaxobankModel):
-    DurationType: e.OrderDurationType
-    ExpirationDateContainsTime: Optional[bool]
-    ExpirationDateTime: Optional[datetime]
-
-    class Config:
-        use_enum_values = True

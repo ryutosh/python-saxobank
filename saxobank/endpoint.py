@@ -5,6 +5,7 @@ from enum import Enum
 from typing import ClassVar, Optional, Type
 
 from .model import chart, common, port, ref, root
+from .model.base import SaxobankModel
 
 
 class Dimension(str, Enum):
@@ -37,8 +38,8 @@ class Endpoint:
     dimension: Optional[Dimension] = None
     is_order: bool = False
     content_type: ContentType = ContentType.JSON
-    request_model: Optional[Type[common.SaxobankModel]] = None
-    response_model: Optional[Type[common.SaxobankModel]] = None
+    request_model: Optional[Type[SaxobankModel]] = None
+    response_model: Optional[Type[SaxobankModel]] = None
 
     # def url(self, base_url: str, path_converts: dict[str, Any] | None = None) -> str:
     #     converted_path = self.path.format(**path_converts) if path_converts else self.path

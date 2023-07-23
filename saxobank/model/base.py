@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from collections import namedtuple
 from datetime import datetime
-from typing import Any, Container, Final, List, Literal, Optional, Sequence, Tuple, Type, Union, cast, Iterator
+from typing import (Any, Container, Final, Iterator, List, Literal, Optional,
+                    Sequence, Tuple, Type, Union, cast)
 from urllib.parse import parse_qs, urlparse
-from pydantic import BaseModel, Field, HttpUrl
-from typing import Any, Container, Final, List, Literal, Optional, Sequence, Tuple, Type, Union, cast, Iterator
-from pydantic import BaseModel, Field, HttpUrl, ConfigDict, RootModel
-from .common import ContextId, ReferenceId, InlineCountValue
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel
+
+from .common import ContextId, InlineCountValue, ReferenceId
 
 
 class ODataRequest(BaseModel):
@@ -149,6 +150,19 @@ class SaxobankRootModel(RootModel[Sequence[SaxobankModel]]):
     def __getitem__(self, item: int) -> SaxobankModel:
         return self.root[item]
 
+class ErrorResponse(SaxobankModel):
+    ErrorCode: str
+    Message: str
+    ModelState: Optional[Any]
+
+
+class OrderDuration(SaxobankModel):
+    DurationType: e.OrderDurationType
+    ExpirationDateContainsTime: Optional[bool]
+    ExpirationDateTime: Optional[datetime]
+
+    class Config:
+        use_enum_values = True
 
 
 class ListResultModel(SaxobankModel):
