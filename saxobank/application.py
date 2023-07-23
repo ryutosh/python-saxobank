@@ -9,7 +9,7 @@ from aiohttp import ClientSession
 
 from . import endpoint
 from .environment import LIVE, SIM, SaxobankEnvironment, WsBaseUrl
-from .model.common import ContextId, ResponseCode, _SaxobankModel
+from .model.common import ContextId, ResponseCode, SaxobankModel
 from .streaming_session import StreamingSession
 from .user_session import RateLimiter, UserSession, _OpenApiRequestResponse
 
@@ -52,7 +52,7 @@ class SessionFacade:
     def _openapi_request(
         self,
         endpoint: endpoint.Endpoint,
-        request_model: _SaxobankModel | None = None,
+        request_model: SaxobankModel | None = None,
         access_token: str | None = None,
     ) -> _OpenApiRequestResponse:  # -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         return self._user_session.openapi_request(endpoint, request_model, access_token)

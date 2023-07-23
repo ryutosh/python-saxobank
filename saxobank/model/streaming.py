@@ -1,18 +1,38 @@
 from __future__ import annotations
 
 from collections.abc import Container
-from typing import List, Literal, Optional, Set
+from typing import List, Literal, Optional, Set, Sequence
 
-from .common import ContextId, ReferenceId, _SaxobankModel
+from .common import ContextId, ReferenceId, SaxobankModel, SaxobankRootModel
 from .enum import HeartbeatReason
+# from dataclasses import dataclass
 
-
-class Heartbeats(_SaxobankModel):
+# @dataclass
+# class Heartbeats():
+class Heartbeats(SaxobankModel):
     OriginatingReferenceId: ReferenceId
     Reason: HeartbeatReason
 
+class ListHeartbeats(SaxobankRootModel):
+    root: List[Heartbeats]
 
-class ResHeartbeat(_SaxobankModel):
+
+class BaseData:
+    pass
+
+class SubData(BaseData):
+    pass
+
+class Base:
+    cls_data: BaseData
+    list_data: Sequence[BaseData]
+
+class Sub(Base):
+    cls_data: SubData
+    list_data: List[SubData]
+
+
+class ResHeartbeat(SaxobankModel):
     ReferenceId: Literal["_heartbeat"]
     Heartbeats: List[Heartbeats]
 
@@ -20,15 +40,15 @@ class ResHeartbeat(_SaxobankModel):
         return {h.OriginatingReferenceId for h in self.Heartbeats if h.Reason in reasons}
 
 
-class ResResetSubscriptions(_SaxobankModel):
+class ResResetSubscriptions(SaxobankModel):
     ReferenceId: Literal["_resetsubscriptions"]
     TargetReferenceIds: List[ReferenceId]
 
 
-class ReqConnect(_SaxobankModel):
+class ReqConnect(SaxobankModel):
     contextid: ContextId
     messageid: Optional[int]
 
 
-class ReqAuthorize(_SaxobankModel):
+class ReqAuthorize(SaxobankModel):
     contextid: ContextId

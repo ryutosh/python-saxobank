@@ -7,5 +7,5 @@ from .. import enum as e
 # from urllib.parse import quote
 
 
-class PutCapabilities(c._SaxobankModel):
+class PutCapabilities(c.SaxobankModel):
     TradeLevel: e.TradeLevel

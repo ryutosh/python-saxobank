@@ -15,7 +15,7 @@ from . import endpoint, exception
 from .common import auth_header
 from .environment import WsBaseUrl
 from .model import streaming as model_streaming
-from .model.common import ContextId, ReferenceId, ResponseCode, _SaxobankModel
+from .model.common import ContextId, ReferenceId, ResponseCode, SaxobankModel
 from .model.enum import HeartbeatReason
 from .subscription import Subscription, Subscriptions
 
@@ -144,7 +144,7 @@ class Streaming:
         self._subscriptions.clear()
         return self._return_or_raise(exception.ResetSubscriptionsError(need_resets))
 
-    async def receive(self) -> Union[_SaxobankModel, Exception]:
+    async def receive(self) -> Union[SaxobankModel, Exception]:
         while True:
             timestamp_of_empty = datetime.now(tz=timezone.utc)
 
@@ -190,7 +190,7 @@ class Streaming:
 
             return snapshot
 
-    async def __anext__(self) -> Union[_SaxobankModel, Exception]:
+    async def __anext__(self) -> Union[SaxobankModel, Exception]:
         if self._ws_resp.closed:
             raise StopAsyncIteration
         return await self.receive()
@@ -224,7 +224,7 @@ class Streaming:
 class _CreateSubscriptionResponse:
     code: ResponseCode
     reference_id: Optional[ReferenceId] = None
-    snapshot: Optional[_SaxobankModel] = None
+    snapshot: Optional[SaxobankModel] = None
     next_request: Optional[Coroutine] = None
     inactivity_timeout: Optional[int] = None
     format: Optional[int] = None
@@ -319,7 +319,7 @@ class StreamingSession:
         format: Optional[str] = None,
         refresh_rate: Optional[int] = None,
         replace_reference_id: Optional[ReferenceId] = None,
-        arguments: Optional[_SaxobankModel] = None,
+        arguments: Optional[SaxobankModel] = None,
     ) -> _CreateSubscriptionResponse:
         reference_id = reference_id if reference_id else ReferenceId()
         req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST.request_model(

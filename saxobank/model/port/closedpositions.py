@@ -13,20 +13,20 @@ from .. import enum as e
 # from decimal import Decimal
 
 
-class ClosedPositionReq(c._SaxobankModel, c.ODataRequest):
+class ClosedPositionReq(c.SaxobankModel, c.ODataRequest):
     ClientKey: c.ClientKey
 
 
-class ClosedPositionRes(c._SaxobankModel, c.ODataResponse):
+class ClosedPositionRes(c.SaxobankModel, c.ODataResponse):
     Data: list[ClosedPositionResponse]
 
 
 # Not fully covered
-class ClosedPosition(c._SaxobankModel):
+class ClosedPosition(c.SaxobankModel):
     AssetType: e.AssetType
 
 
-class ClosedPositionRequest(c._SaxobankModel):
+class ClosedPositionRequest(c.SaxobankModel):
     ClientKey: c.ClientKey
 
 
@@ -36,7 +36,7 @@ class PostSubscriptionReq(c._ReqCreateSubscription):
 
 
 # Not fully covered
-class ClosedPositionResponse(c._SaxobankModel):
+class ClosedPositionResponse(c.SaxobankModel):
     ClosedPositionUniqueId: str
     NetPositionId: N[str]
     ClosedPosition: N[ClosedPosition]
@@ -49,7 +49,7 @@ class ClosedPositionResponse(c._SaxobankModel):
             return False
 
 
-class ListResultClosedPositionResponse(c._SaxobankModel, c.ODataResponse):
+class ListResultClosedPositionResponse(c.SaxobankModel, c.ODataResponse):
     Data: List[ClosedPositionResponse]
 
 

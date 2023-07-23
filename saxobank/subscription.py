@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Collection, Iterator, Optional, Set, Union, cast
 
 from .common import is_aware_datetime
-from .model.common import ReferenceId, _SaxobankModel
+from .model.common import ReferenceId, SaxobankModel
 
 # class BaseSubscription(abc.ABC):
 #     def __init__(self, user_session: UserSession, context_id: ContextId, reference_id: ReferenceId) -> None:
@@ -84,7 +84,7 @@ class Subscription:
 
         # Post setups
         self._preparation = asyncio.Event()
-        self._snapshot: Optional[_SaxobankModel] = None
+        self._snapshot: Optional[SaxobankModel] = None
         self._inactivity_timeout: Optional[timedelta] = None
         self._timeout_after: Optional[datetime] = None
 
@@ -115,17 +115,17 @@ class Subscription:
         return (self._timeout_after < evaluate_at) if self._timeout_after else False
 
     @property
-    def snapshot(self) -> _SaxobankModel:
+    def snapshot(self) -> SaxobankModel:
         if not self._snapshot:
             raise RuntimeError
 
         return self._snapshot.copy()
 
-    def apply_delta(self, delta: Any) -> Optional[_SaxobankModel]:
+    def apply_delta(self, delta: Any) -> Optional[SaxobankModel]:
         assert self._snapshot is not None
         self._snapshot, is_parted = self.snapshot.apply_delta(delta)
 
-        return cast(_SaxobankModel, self._snapshot) if not is_parted else None
+        return cast(SaxobankModel, self._snapshot) if not is_parted else None
 
 
 class Subscriptions(collections.abc.MutableSet):

@@ -10,7 +10,7 @@ from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 # ****************************************************************
 # SubModels
 # ****************************************************************
-class ChartInfo(_c._SaxobankModel):
+class ChartInfo(_c.SaxobankModel):
     """Represents ChartInfo.
     Attributes:
         ExchangeId: Id of the Exchange. Go to the ReferenceData/Exhanges endpoint to get exchange session info.
@@ -24,7 +24,7 @@ class ChartInfo(_c._SaxobankModel):
     DelayedByMinutes: Optional[int] = None
 
 
-class ChartSample(_c._SaxobankModel):
+class ChartSample(_c.SaxobankModel):
     CloseAsk: float
     CloseBid: float
     Time: datetime
@@ -33,7 +33,7 @@ class ChartSample(_c._SaxobankModel):
 # ****************************************************************
 # Request
 # ****************************************************************
-class ChartSubscriptionRequest(_c._SaxobankModel):
+class ChartSubscriptionRequest(_c.SaxobankModel):
     """Represents bellow Saxobank OpenAPI requests.
     https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/addsubscriptionasync/dbf87ad4302f2d4289be19be8cb4a3db
     """
@@ -54,7 +54,7 @@ class ReqSubscriptionDelete(_c._ReqRemoveSubscription):
 # ****************************************************************
 # Response
 # ****************************************************************
-class ChartResponse(_c._SaxobankModel):
+class ChartResponse(_c.SaxobankModel):
     DataVersion: int
     ChartInfo: Optional[ChartInfo] = None
     Data: List[ChartSample]
@@ -62,7 +62,7 @@ class ChartResponse(_c._SaxobankModel):
     _partitions: Set[int] = set()
 
     def apply_delta(self, delta: Any) -> Tuple[ChartResponse, bool]:
-        if not isinstance(delta, _c._SaxobankModel):
+        if not isinstance(delta, _c.SaxobankModel):
             delta = RespSubscriptionsStreaming.parse_obj(delta)
 
         if delta.PartitionNumber:

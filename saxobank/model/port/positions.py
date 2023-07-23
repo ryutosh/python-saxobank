@@ -18,7 +18,7 @@ from .. import enum as e
 # ****************************************************************
 
 
-class RelatedOrderInfo(c._SaxobankModel):
+class RelatedOrderInfo(c.SaxobankModel):
     Amount: N[Decimal]
     Duration: N[c.OrderDuration]
     OpenOrderType: N[e.OrderType]
@@ -26,12 +26,12 @@ class RelatedOrderInfo(c._SaxobankModel):
 
 
 # Dynamic Contents for a Position. The following fields are updated as prices change or the position is updated, filled or closed.
-class PositionDynamic(c._SaxobankModel):
+class PositionDynamic(c.SaxobankModel):
     MarketState: N[e.MarketState]
 
 
 # Static contents for a position. The following fields do not change when the price is updated
-class PositionStatic(c._SaxobankModel):
+class PositionStatic(c.SaxobankModel):
     AccountKey: N[c.AccountKey]
     AssetType: N[e.AssetType]
     Uic: N[int]
@@ -50,7 +50,7 @@ class PositionStatic(c._SaxobankModel):
 # ****************************************************************
 # Request Main Models
 # ****************************************************************
-class PositionsReq(c._SaxobankModel):
+class PositionsReq(c.SaxobankModel):
     ClientKey: c.ClientKey
     AccountKey: N[c.AccountKey]
     FieldGroups: N[list[e.PositionFieldGroup]]
@@ -59,7 +59,7 @@ class PositionsReq(c._SaxobankModel):
         use_enum_values = True
 
 
-class PositionsPositionIdReq(c._SaxobankModel):
+class PositionsPositionIdReq(c.SaxobankModel):
     ClientKey: c.ClientKey
     PositionId: str
     # AccountKey: N[e.AccountKey]
@@ -73,7 +73,7 @@ class PositionsPositionIdReq(c._SaxobankModel):
         use_enum_values = True
 
 
-class MeReq(c._SaxobankModel, c.ODataRequest):
+class MeReq(c.SaxobankModel, c.ODataRequest):
     FieldGroups: N[list[e.PositionFieldGroup]]
     PriceMode: N[e.PriceMode]
 
@@ -81,14 +81,14 @@ class MeReq(c._SaxobankModel, c.ODataRequest):
 # ****************************************************************
 # Response Main Models
 # ****************************************************************
-class PositionsRes(c._SaxobankModel):
+class PositionsRes(c.SaxobankModel):
     NetPositionId: N[str]
     PositionId: N[str]
     PositionBase: N[PositionStatic]
     PositionView: N[PositionDynamic]
 
 
-class MeRes(c._SaxobankModel, c.ODataResponse):
+class MeRes(c.SaxobankModel, c.ODataResponse):
     Data: list[PositionsRes]
 
     # def has_order_id(self, order_id) -> bool | None:
