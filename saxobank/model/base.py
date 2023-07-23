@@ -15,6 +15,7 @@ from typing import Any, Container, Final, List, Literal, Optional, Sequence, Tup
 from pydantic import BaseModel, Field, HttpUrl, ConfigDict, RootModel
 from .common import ContextId, ReferenceId, InlineCountValue
 
+
 class ODataRequest(BaseModel):
     inlinecount: Optional[InlineCountValue] = None
     top: Optional[int] = Field(alias="$top")
