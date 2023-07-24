@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 
@@ -18,13 +19,15 @@ from ..common import AssetType, ChartRequestMode
 # ****************************************************************
 # SubModels
 # ****************************************************************
-class ChartInfo(SaxobankModel):
+# class ChartInfo(SaxobankModel):
+@dataclass
+class ChartInfo:
     """Represents ChartInfo.
     Attributes:
-        ExchangeId: Id of the Exchange. Go to the ReferenceData/Exhanges endpoint to get exchange session info.
-        Horizon: Horizon in minutes.
-        FirstSampleTime: The time of the first (oldest) available sample available for this instrument. Useful for the client when calculating the size of the horizontal slider.
-        DelayedByMinutes: If the pricefeed is delayed, this field will be returned indicating the delay in minutes.
+        ExchangeId (str): Id of the Exchange. Go to the ReferenceData/Exhanges endpoint to get exchange session info.
+        Horizon (int): Horizon in minutes.
+        FirstSampleTime (datetime)): The time of the first (oldest) available sample available for this instrument. Useful for the client when calculating the size of the horizontal slider.
+        DelayedByMinutes (int): If the pricefeed is delayed, this field will be returned indicating the delay in minutes.
     """
 
     ExchangeId: str
@@ -33,20 +36,35 @@ class ChartInfo(SaxobankModel):
     DelayedByMinutes: Optional[int] = None
 
 
-class ChartSample(SaxobankModel):
+# class ChartSample(SaxobankModel):
+@dataclass
+class ChartSample:
     CloseAsk: float
     CloseBid: float
     Time: datetime
 
 
-class Data(SaxobankRootModel):
-    root: List[ChartSample]
+# class Data(SaxobankRootModel):
+@dataclass
+class Data:
+    """Represents Data.
+    Attributes:
+        root (list[charts.ChartSample]): Array holding the individual OHLC samples. For Forex Instruments both Bid and Ask values are returned. For other instruments the values are the last traded values.
+    """
+
+    _root: List[ChartSample]
 
 
 # ****************************************************************
 # Request
 # ****************************************************************
-class GetReq(SaxobankModel):
+# class GetReq(SaxobankModel):
+from pydantic.dataclasses import dataclass as pyd
+
+
+@dataclass
+# @pyd
+class GetReq:
     """Represents service charts request.
 
     Attributes descriptions are referenced from [OpenAPI Reference]: https://.
@@ -62,21 +80,30 @@ class GetReq(SaxobankModel):
     Uic: int
     Horizon: int
     Mode: common.ChartRequestMode
-    Count: Optional[int]
+    Count: Optional[int] = None
 
-    def __init__(
-        self,
-        asset_type: AssetType,
-        uic: int,
-        horizon: int,
-        mode: common.ChartRequestMode,
-        count: Optional[int] = None,
-    ):
-        self.AssetType = asset_type
-        self.Uic = uic
-        self.Horizon = horizon
-        self.Mode = mode
-        self.Count = count
+    def __post_init__(self):
+        if not isinstance(self.AssetType, AssetType):
+            if isinstance(self.AssetType, str):
+                self.AssetType = AssetType(self.AssetType)
+            else:
+                raise ValueError("Invalid AssetType")
+        if not isinstance(self.Mode, ChartRequestMode):
+            raise ValueError("Invalid ChartRequestMode")
+
+    # def __init__(
+    #     self,
+    #     asset_type: AssetType,
+    #     uic: int,
+    #     horizon: int,
+    #     mode: common.ChartRequestMode,
+    #     count: Optional[int] = None,
+    # ):
+    #     self.AssetType = asset_type
+    #     self.Uic = uic
+    #     self.Horizon = horizon
+    #     self.Mode = mode
+    #     self.Count = count
 
 
 class ChartSubscriptionRequest(SaxobankModel):
@@ -101,7 +128,11 @@ class ReqSubscriptionDelete(_ReqRemoveSubscription):
 # ****************************************************************
 # Response
 # ****************************************************************
-class GetResp(SaxobankModel):
+# class GetResp(SaxobankModel):
+
+
+@dataclass
+class GetResp:
     """Represents conposit model.
 
     Attributes descriptions are referenced from [OpenAPI Reference]: https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/getchartdataasync/387cfc61d3292d9237095b9144ac4733/.
@@ -113,11 +144,11 @@ class GetResp(SaxobankModel):
 
     """
 
-    ChartInfo: Optional[ChartInfo] = None
-    Data: Data
+    # Data: Data
     DataVersion: int
+    ChartInfo: Optional[ChartInfo] = None
 
-    _partitions: Set[int] = set()
+    # _partitions: Set[int] = set()
 
     def apply_delta(self, delta: Any) -> Tuple[ChartResponse, bool]:
         """Example function with types documented in the docstring.
