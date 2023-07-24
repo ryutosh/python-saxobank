@@ -6,37 +6,43 @@ from typing import Optional as N
 
 from pydantic import Field
 
-from .. import common as c
-from .. import enum as e
+from ..base import (
+    ODataRequest,
+    ODataResponse,
+    SaxobankModel,
+    _ReqCreateSubscription,
+    _RespCreateSubscription,
+)
+from ..common import AssetType, ClientKey
 
 # from collections.abc import Iterable
 # from decimal import Decimal
 
 
-class ClosedPositionReq(c.SaxobankModel, c.ODataRequest):
-    ClientKey: c.ClientKey
+class ClosedPositionReq(SaxobankModel, ODataRequest):
+    ClientKey: ClientKey
 
 
-class ClosedPositionRes(c.SaxobankModel, c.ODataResponse):
+class ClosedPositionRes(SaxobankModel, ODataResponse):
     Data: list[ClosedPositionResponse]
 
 
 # Not fully covered
-class ClosedPosition(c.SaxobankModel):
-    AssetType: e.AssetType
+class ClosedPosition(SaxobankModel):
+    AssetType: AssetType
 
 
-class ClosedPositionRequest(c.SaxobankModel):
-    ClientKey: c.ClientKey
+class ClosedPositionRequest(SaxobankModel):
+    ClientKey: ClientKey
 
 
-class PostSubscriptionReq(c._ReqCreateSubscription):
+class PostSubscriptionReq(_ReqCreateSubscription):
     top: N[int] = Field(alias="$top")
     Arguments: N[ClosedPositionRequest]
 
 
 # Not fully covered
-class ClosedPositionResponse(c.SaxobankModel):
+class ClosedPositionResponse(SaxobankModel):
     ClosedPositionUniqueId: str
     NetPositionId: N[str]
     ClosedPosition: N[ClosedPosition]
@@ -49,11 +55,11 @@ class ClosedPositionResponse(c.SaxobankModel):
             return False
 
 
-class ListResultClosedPositionResponse(c.SaxobankModel, c.ODataResponse):
+class ListResultClosedPositionResponse(SaxobankModel, ODataResponse):
     Data: List[ClosedPositionResponse]
 
 
-class PostSubscriptionRes(c._RespCreateSubscription):
+class PostSubscriptionRes(_RespCreateSubscription):
     Snapshot: ListResultClosedPositionResponse
 
 

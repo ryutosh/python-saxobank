@@ -1,11 +1,11 @@
 # from datetime import datetime
 from __future__ import annotations
 
-from .. import common as c
-from .. import enum as e
+from ..base import SaxobankModel
+from ..common import TradeLevel
 
 # from urllib.parse import quote
 
 
-class PutCapabilities(c.SaxobankModel):
-    TradeLevel: e.TradeLevel
+class PutCapabilities(SaxobankModel):
+    TradeLevel: TradeLevel

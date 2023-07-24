@@ -8,8 +8,17 @@ from typing import Optional as N
 
 from pydantic import conint
 
-from .. import enum as e
-from ..common import ODataRequest, ODataResponse, SaxobankModel
+from ..base import ODataRequest, ODataResponse, SaxobankModel
+from ..common import (
+    AssetType,
+    InstrumentFieldGroup,
+    NonTradableReasons,
+    OrderDistanceType,
+    OrderDurationType,
+    PlaceableOrderType,
+    PriceDisplayFormatType,
+    TradingStatus,
+)
 
 
 # ****************************************************************
@@ -25,20 +34,20 @@ class ExchangeSummaryResponse(SaxobankModel):
 
 class OrderDistancesResponse(SaxobankModel):
     EntryDefaultDistance: float
-    EntryDefaultDistanceType: e.OrderDistanceType
+    EntryDefaultDistanceType: OrderDistanceType
     StopLossDefaultDistance: float
-    StopLossDefaultDistanceType: e.OrderDistanceType
+    StopLossDefaultDistanceType: OrderDistanceType
 
 
 class PriceDisplayFormatResponse(SaxobankModel):
     OrderDecimals: conint(ge=0)
-    Format: N[e.PriceDisplayFormatType]
+    Format: N[PriceDisplayFormatType]
     PriceCurrency: N[str]
 
 
 class SupportedOrderTypeSettingResponse(SaxobankModel):
-    DurationTypes: list[e.OrderDurationType]
-    OrderType: e.PlaceableOrderType
+    DurationTypes: list[OrderDurationType]
+    OrderType: PlaceableOrderType
 
 
 class TickSizeSchemeElementResponse(SaxobankModel):
@@ -55,9 +64,9 @@ class TickSizeSchemeResponse(SaxobankModel):
 # Request Main Models
 # ****************************************************************
 class InstrumentsDetailsRequest(SaxobankModel, ODataRequest):
-    AssetTypes: N[list[e.AssetType]]
+    AssetTypes: N[list[AssetType]]
     Uics: N[list[int]]
-    FieldGroups: N[list[e.InstrumentFieldGroup]]
+    FieldGroups: N[list[InstrumentFieldGroup]]
 
     # class Config:
     #     use_enum_values = True
@@ -73,7 +82,7 @@ class InstrumentsDetails(SaxobankModel):
     # ModelState: N[Any]
 
     # Display, Format and Defaults
-    AssetType: N[e.AssetType]
+    AssetType: N[AssetType]
     Uic: N[int]
     Symbol: N[str]
     Description: N[str]
@@ -84,15 +93,15 @@ class InstrumentsDetails(SaxobankModel):
     CurrencyCode: N[str]
     # Validation
     IsTradable: N[bool] = True
-    TradableAs: N[list[e.AssetType]]
-    TradingStatus: N[e.TradingStatus] = e.TradingStatus.Tradable
-    NonTradableReason: N[e.NonTradableReasons]
+    TradableAs: N[list[AssetType]]
+    TradingStatus: N[TradingStatus] = TradingStatus.Tradable
+    NonTradableReason: N[NonTradableReasons]
     ShortTradeDisabled: N[bool] = False
     # OrderConditions
     AmountDecimals: N[conint(ge=0)]
     MinimumLotSize: N[float]
     OrderDistances: N[OrderDistancesResponse]
-    SupportedOrderTypes: N[list[e.PlaceableOrderType]]
+    SupportedOrderTypes: N[list[PlaceableOrderType]]
     SupportedOrderTypeSettings: N[list[SupportedOrderTypeSettingResponse]]
     # TickSize
     TickSizeScheme: N[TickSizeSchemeResponse]

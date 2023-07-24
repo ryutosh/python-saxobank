@@ -15,12 +15,14 @@ from . import endpoint, exception, model
 from .common import auth_header
 from .endpoint import ContentType, Dimension, HttpMethod
 from .environment import RestBaseUrl
-from .model.common import (ErrorResponse, ODataResponse, ResponseCode,
-                           SaxobankModel)
+from .model.base import ErrorResponse, ODataResponse, SaxobankModel
+from .model.common import ResponseCode
 
 
 class RateLimiter:
-    async def throttle(self, dimension: Optional[Dimension] = None, is_order: bool = False) -> None:
+    async def throttle(
+        self, dimension: Optional[Dimension] = None, is_order: bool = False
+    ) -> None:
         pass
 
 
@@ -73,9 +75,20 @@ class UserSession:
 
         """
         # ->  Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
-        url = urljoin(self.base_url, endpoint.url(request_model.path_items() if request_model else None))
-        params = request_model.dict_lower_case() if request_model and endpoint.method == HttpMethod.GET else None
-        data = request_model.dict() if request_model and endpoint.method != HttpMethod.GET else None
+        url = urljoin(
+            self.base_url,
+            endpoint.url(request_model.path_items() if request_model else None),
+        )
+        params = (
+            request_model.dict_lower_case()
+            if request_model and endpoint.method == HttpMethod.GET
+            else None
+        )
+        data = (
+            request_model.dict()
+            if request_model and endpoint.method != HttpMethod.GET
+            else None
+        )
 
         # req_data = request_model.dict(exclude_unset=True, by_alias=True) if request_model else None
         # params = req_data if endpoint.method == HttpMethod.GET else None
@@ -93,22 +106,34 @@ class UserSession:
                 params=params,
                 data=data if endpoint.content_type != ContentType.JSON else None,
                 json=data if endpoint.content_type == ContentType.JSON else None,
-                headers=auth_header(cast(str, access_token if access_token else self.token)),
+                headers=auth_header(
+                    cast(str, access_token if access_token else self.token)
+                ),
                 raise_for_status=False,
             ) as response:
                 info = response.request_info
                 code = ResponseCode(response.status)
-                json = await response.json() if response.content_type == ContentType.JSON else None
+                json = (
+                    await response.json()
+                    if response.content_type == ContentType.JSON
+                    else None
+                )
 
             error_response = self.error_response(code, json)
             if error_response:
                 return _OpenApiRequestResponse(code, error_response, None)
 
             # response_model = endpoint.response_model.parse_obj(json) if endpoint.response_model else None
-            response_model = parse_obj_as(endpoint.response_model, json) if endpoint.response_model else None
+            response_model = (
+                parse_obj_as(endpoint.response_model, json)
+                if endpoint.response_model
+                else None
+            )
             is_odata, next_callback = self.is_odata_response(response_model)
 
-            return _OpenApiRequestResponse(code, response_model.Data if is_odata else response_model, next_callback)
+            return _OpenApiRequestResponse(
+                code, response_model.Data if is_odata else response_model, next_callback
+            )
 
         except aiohttp.ClientResponseError as ex:
             raise exception.ResponseError(ex.status, ex.message)
@@ -124,7 +149,9 @@ class UserSession:
             raise exception.InternalError(str(ex) + f"\r\nResponce was: {json}")
 
     @classmethod
-    def error_response(cls, code: ResponseCode, json: Optional[Any] = None) -> Optional[ErrorResponse]:
+    def error_response(
+        cls, code: ResponseCode, json: Optional[Any] = None
+    ) -> Optional[ErrorResponse]:
         if code != ResponseCode.BAD_REQUEST or not json:
             return None
 
@@ -133,7 +160,9 @@ class UserSession:
         except pydantic.ValidationError:
             return None
 
-    def is_odata_response(self, response_model: Optional[SaxobankModel]) -> Tuple[bool, Optional[Coroutine]]:
+    def is_odata_response(
+        self, response_model: Optional[SaxobankModel]
+    ) -> Tuple[bool, Optional[Coroutine]]:
         if not isinstance(response_model, ODataResponse):
             return False, None
 
@@ -149,21 +178,40 @@ class UserSession:
         return True, partial(self.openapi_request, next_endpoint, next_request_model)
 
     # Chart
-    chart_charts_subscription_delete = partialmethod(openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE)
-    chart_charts_subscription_post = partialmethod(openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST)
+    chart_charts_subscription_delete = partialmethod(
+        openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE
+    )
+    chart_charts_subscription_post = partialmethod(
+        openapi_request, endpoint.CHART_CHARTS_SUBSCRIPTIONS_POST
+    )
 
     # Portfolio
     port_clients_me_get = partialmethod(openapi_request, endpoint.PORT_CLIENTS_ME_GET)
-    port_closedpositions_get = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET)
-    port_closedpositions_subscription_post = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_POST)
-    port_closedpositions_subscription_patch = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_PATCH)
-    port_closedpositions_subscription_delete = partialmethod(openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_DELETE)
-    port_positions_me_get = partialmethod(openapi_request, endpoint.PORT_POSITIONS_ME_GET)
-    port_positions_positionid_get = partialmethod(openapi_request, endpoint.PORT_POSITIONS_POSITIONID_GET)
+    port_closedpositions_get = partialmethod(
+        openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET
+    )
+    port_closedpositions_subscription_post = partialmethod(
+        openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_POST
+    )
+    port_closedpositions_subscription_patch = partialmethod(
+        openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_PATCH
+    )
+    port_closedpositions_subscription_delete = partialmethod(
+        openapi_request, endpoint.PORT_CLOSEDPOSITIONS_SUBSCRIPTION_DELETE
+    )
+    port_positions_me_get = partialmethod(
+        openapi_request, endpoint.PORT_POSITIONS_ME_GET
+    )
+    port_positions_positionid_get = partialmethod(
+        openapi_request, endpoint.PORT_POSITIONS_POSITIONID_GET
+    )
 
     # Reference
-    ref_instruments_details_get = partialmethod(openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET)
+    ref_instruments_details_get = partialmethod(
+        openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET
+    )
 
     # Root
-    root_sessions_capabilities_put = partialmethod(openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT)
-
+    root_sessions_capabilities_put = partialmethod(
+        openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT
+    )

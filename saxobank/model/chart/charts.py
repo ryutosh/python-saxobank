@@ -3,7 +3,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
 
-from ..base import SaxobankModel, SaxobankRootModel
+from saxobank.model import common
+
+from ..base import (
+    SaxobankModel,
+    SaxobankRootModel,
+    _ReqCreateSubscription,
+    _ReqRemoveSubscription,
+    _RespCreateSubscription,
+)
 from ..common import AssetType, ChartRequestMode
 
 
@@ -18,6 +26,7 @@ class ChartInfo(SaxobankModel):
         FirstSampleTime: The time of the first (oldest) available sample available for this instrument. Useful for the client when calculating the size of the horizontal slider.
         DelayedByMinutes: If the pricefeed is delayed, this field will be returned indicating the delay in minutes.
     """
+
     ExchangeId: str
     Horizon: int
     FirstSampleTime: Optional[datetime] = None
@@ -38,13 +47,31 @@ class Data(SaxobankRootModel):
 # Request
 # ****************************************************************
 class GetReq(SaxobankModel):
+    """Represents service charts request.
+
+    Attributes descriptions are referenced from [OpenAPI Reference]: https://.
+
+    Attributes:
+        AssetType (AssetType): asset.
+        Uic (int): uic.
+        Mode (saxobank.model.common.ChartRequestMode): mode
+
+    """
+
     AssetType: AssetType
     Uic: int
     Horizon: int
-    Mode: ChartRequestMode
+    Mode: common.ChartRequestMode
     Count: Optional[int]
 
-    def __init__(self, asset_type: AssetType, uic: int, horizon: int, mode: ChartRequestMode, count: Optional[int] = None):
+    def __init__(
+        self,
+        asset_type: AssetType,
+        uic: int,
+        horizon: int,
+        mode: common.ChartRequestMode,
+        count: Optional[int] = None,
+    ):
         self.AssetType = asset_type
         self.Uic = uic
         self.Horizon = horizon
@@ -52,22 +79,22 @@ class GetReq(SaxobankModel):
         self.Count = count
 
 
-
 class ChartSubscriptionRequest(SaxobankModel):
     """Represents bellow Saxobank OpenAPI requests.
     https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/addsubscriptionasync/dbf87ad4302f2d4289be19be8cb4a3db
     """
+
     AssetType: AssetType
     Uic: int
     Horizon: int
     Count: Optional[int] = None
 
 
-class ReqSubscriptionsPost(_c._ReqCreateSubscription):
+class ReqSubscriptionsPost(_ReqCreateSubscription):
     Arguments: ChartSubscriptionRequest
 
 
-class ReqSubscriptionDelete(_c._ReqRemoveSubscription):
+class ReqSubscriptionDelete(_ReqRemoveSubscription):
     pass
 
 
@@ -80,7 +107,7 @@ class GetResp(SaxobankModel):
     Attributes descriptions are referenced from [OpenAPI Reference]: https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/getchartdataasync/387cfc61d3292d9237095b9144ac4733/.
 
     Attributes:
-        Data: Array holding the individual OHLC samples. For Forex Instruments both Bid and Ask values are returned. For other instruments the values are the last traded values.
+        Data (saxobank.model.chart.charts.Data): Array holding the individual OHLC samples. For Forex Instruments both Bid and Ask values are returned. For other instruments the values are the last traded values.
 
 
 
@@ -116,13 +143,17 @@ class GetResp(SaxobankModel):
         if delta.PartitionNumber:
             self._partitions.add(delta.PartitionNumber)
 
-        is_parted = bool(len(self._partitions) == delta.TotalPartition) if delta.TotalPartition else False
+        is_parted = (
+            bool(len(self._partitions) == delta.TotalPartition)
+            if delta.TotalPartition
+            else False
+        )
         return self.merge(delta.Data), is_parted
 
 
-class RespSubscriptionsStreaming(_c._RespPartedStreaming):
-    Data: ChartResponse
+# class RespSubscriptionsStreaming(_RespPartedStreaming):
+#     Data: ChartResponse
 
 
-class RespSubscriptionsPost(_c._RespCreateSubscription):
+class RespSubscriptionsPost(_RespCreateSubscription):
     Snapshot: ChartResponse

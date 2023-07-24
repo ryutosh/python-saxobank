@@ -9,7 +9,8 @@ from aiohttp import ClientSession
 
 from . import endpoint
 from .environment import LIVE, SIM, SaxobankEnvironment, WsBaseUrl
-from .model.common import ContextId, ResponseCode, SaxobankModel
+from .model.base import SaxobankModel
+from .model.common import ContextId, ResponseCode
 from .streaming_session import StreamingSession
 from .user_session import RateLimiter, UserSession, _OpenApiRequestResponse
 
@@ -19,7 +20,12 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class Application:
-    def __init__(self, saxobank_environment: SaxobankEnvironment, application_key, application_secret):
+    def __init__(
+        self,
+        saxobank_environment: SaxobankEnvironment,
+        application_key,
+        application_secret,
+    ):
         self.saxo_env = saxobank_environment
         self.__app_key = application_key
         self.__app_secret = application_secret
@@ -35,7 +41,9 @@ class Application:
 
     def create_session(self, access_token: Optional[str] = None) -> SessionFacade:
         client_session = ClientSession(json_serialize=simplejson.dumps)
-        user_session = UserSession(self.saxo_env.rest_base_url, client_session, self.limiter, access_token)
+        user_session = UserSession(
+            self.saxo_env.rest_base_url, client_session, self.limiter, access_token
+        )
         # return SessionFacade(rest_base_url, ws_base_url, access_token)
         return SessionFacade(user_session, self.saxo_env.ws_base_url)
 
@@ -54,13 +62,21 @@ class SessionFacade:
         endpoint: endpoint.Endpoint,
         request_model: SaxobankModel | None = None,
         access_token: str | None = None,
-    ) -> _OpenApiRequestResponse:  # -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
+    ) -> (
+        _OpenApiRequestResponse
+    ):  # -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         return self._user_session.openapi_request(endpoint, request_model, access_token)
 
     port_clients_me_get = partialmethod(_openapi_request, endpoint.PORT_CLIENTS_ME_GET)
-    port_closedpositions_get = partialmethod(_openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET)
-    ref_instruments_details_get = partialmethod(_openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET)
-    root_sessions_capabilities_put = partialmethod(_openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT)
+    port_closedpositions_get = partialmethod(
+        _openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET
+    )
+    ref_instruments_details_get = partialmethod(
+        _openapi_request, endpoint.REF_INSTRUMENTS_DETAILS_GET
+    )
+    root_sessions_capabilities_put = partialmethod(
+        _openapi_request, endpoint.ROOT_SESSIONS_CAPABILITIES_PUT
+    )
 
     def create_streaming_session(
         self, context_id: Optional[ContextId] = None, access_token: Optional[str] = None

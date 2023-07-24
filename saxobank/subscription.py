@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Collection, Iterator, Optional, Set, Union, cast
 
 from .common import is_aware_datetime
-from .model.common import ReferenceId, SaxobankModel
+from .model.base import SaxobankModel
+from .model.common import ReferenceId
 
 # class BaseSubscription(abc.ABC):
 #     def __init__(self, user_session: UserSession, context_id: ContextId, reference_id: ReferenceId) -> None:
@@ -78,8 +79,14 @@ from .model.common import ReferenceId, SaxobankModel
 class Subscription:
     # delta_model: SaxobankModel = None
 
-    def __init__(self, reference_id: Union[ReferenceId, str], tag: Optional[str] = None) -> None:
-        self.reference_id = reference_id if isinstance(reference_id, ReferenceId) else ReferenceId(reference_id)
+    def __init__(
+        self, reference_id: Union[ReferenceId, str], tag: Optional[str] = None
+    ) -> None:
+        self.reference_id = (
+            reference_id
+            if isinstance(reference_id, ReferenceId)
+            else ReferenceId(reference_id)
+        )
         self.tag = tag
 
         # Post setups
@@ -172,7 +179,9 @@ class Subscriptions(collections.abc.MutableSet):
             self.remove_items(subscriptions={self.get(r) for r in reference_ids})
 
         elif tag:
-            self.remove_items(subscriptions={s for s in self._subscriptions if s.tag == tag})
+            self.remove_items(
+                subscriptions={s for s in self._subscriptions if s.tag == tag}
+            )
 
     def remove_timeouts(self, evaluate_at: datetime) -> Set[ReferenceId]:
         assert is_aware_datetime(evaluate_at)
@@ -183,5 +192,7 @@ class Subscriptions(collections.abc.MutableSet):
         return {s.reference_id for s in timeouts}
 
     def extend_timeout(self, reference_ids: Container[ReferenceId]) -> None:
-        for subscription in {s for s in self._subscriptions if s.reference_id in reference_ids}:
+        for subscription in {
+            s for s in self._subscriptions if s.reference_id in reference_ids
+        }:
             subscription.extend_timeout()

@@ -15,8 +15,8 @@ from . import endpoint, exception
 from .common import auth_header
 from .environment import WsBaseUrl
 from .model import streaming as model_streaming
-from .model.common import ContextId, ReferenceId, ResponseCode, SaxobankModel
-from .model.enum import HeartbeatReason
+from .model.base import SaxobankModel
+from .model.common import ContextId, HeartbeatReason, ReferenceId, ResponseCode
 from .subscription import Subscription, Subscriptions
 
 # from .subscription import PortClosedPositions
@@ -71,23 +71,41 @@ class DataMessage:
     def _payload_size(self) -> int:
         return self.__parse_int(
             self.__cut(
-                self.message, self.__LAYOUT_PAYLOAD_SIZE.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_SIZE.SIZE
+                self.message,
+                self.__LAYOUT_PAYLOAD_SIZE.INDEX + self.__reference_id_size,
+                self.__LAYOUT_PAYLOAD_SIZE.SIZE,
             )
         )
 
     @property
     def __reference_id_size(self) -> int:
-        return self.__parse_int(self.__cut(self.message, self.__LAYOUT_REF_ID_SIZE.INDEX, self.__LAYOUT_REF_ID_SIZE.SIZE))
+        return self.__parse_int(
+            self.__cut(
+                self.message,
+                self.__LAYOUT_REF_ID_SIZE.INDEX,
+                self.__LAYOUT_REF_ID_SIZE.SIZE,
+            )
+        )
 
     @property
     def message_id(self) -> int:
-        return self.__parse_int(self.__cut(self.message, self.__LAYOUT_MESSAGE_ID.INDEX, self.__LAYOUT_MESSAGE_ID.SIZE))
+        return self.__parse_int(
+            self.__cut(
+                self.message,
+                self.__LAYOUT_MESSAGE_ID.INDEX,
+                self.__LAYOUT_MESSAGE_ID.SIZE,
+            )
+        )
 
     @property
     def payload(self) -> Any:
         return (
             self.__parse_json(
-                self.__cut(self.message, self.__LAYOUT_PAYLOAD.INDEX + self.__reference_id_size, self._payload_size)
+                self.__cut(
+                    self.message,
+                    self.__LAYOUT_PAYLOAD.INDEX + self.__reference_id_size,
+                    self._payload_size,
+                )
             )
             if self._payload_fmt == self.__PAYLOAD_FORMAT_JSON
             else None  # ProtoBuf(Not supported because un-documented at Saxobank.)
@@ -97,14 +115,20 @@ class DataMessage:
     def _payload_fmt(self) -> int:
         return self.__parse_int(
             self.__cut(
-                self.message, self.__LAYOUT_PAYLOAD_FORMAT.INDEX + self.__reference_id_size, self.__LAYOUT_PAYLOAD_FORMAT.SIZE
+                self.message,
+                self.__LAYOUT_PAYLOAD_FORMAT.INDEX + self.__reference_id_size,
+                self.__LAYOUT_PAYLOAD_FORMAT.SIZE,
             )
         )
 
     @property
     def reference_id(self) -> str:
         return self.__parse_str(
-            self.__cut(self.message, self.__LAYOUT_REF_ID.INDEX, self.__LAYOUT_REF_ID.SIZE + self.__reference_id_size)
+            self.__cut(
+                self.message,
+                self.__LAYOUT_REF_ID.INDEX,
+                self.__LAYOUT_REF_ID.SIZE + self.__reference_id_size,
+            )
         )
 
 
@@ -114,7 +138,10 @@ class Streaming:
     _REF_ID_DISCONNECT = "_disconnect"
 
     def __init__(
-        self, ws_resp: aiohttp.ClientWebSocketResponse, subscriptions: Subscriptions, raise_if_stream_error: bool = False
+        self,
+        ws_resp: aiohttp.ClientWebSocketResponse,
+        subscriptions: Subscriptions,
+        raise_if_stream_error: bool = False,
     ):
         self._ws_resp = ws_resp
         self._subscriptions = subscriptions
@@ -136,8 +163,14 @@ class Streaming:
         reset_subscriptions = model_streaming.ResResetSubscriptions.parse_obj(payload)
 
         if reset_subscriptions.TargetReferenceIds:
-            self._subscriptions.remove_items(reference_ids=reset_subscriptions.TargetReferenceIds)
-            return self._return_or_raise(exception.ResetSubscriptionsError(reset_subscriptions.TargetReferenceIds))
+            self._subscriptions.remove_items(
+                reference_ids=reset_subscriptions.TargetReferenceIds
+            )
+            return self._return_or_raise(
+                exception.ResetSubscriptionsError(
+                    reset_subscriptions.TargetReferenceIds
+                )
+            )
 
         # All reference ids are required to reset if no TargetReferenceIds set.
         need_resets = self._subscriptions.reference_ids()
@@ -152,7 +185,9 @@ class Streaming:
             if self._empty:
                 timeouts = self._subscriptions.remove_timeouts(timestamp_of_empty)
                 if timeouts:
-                    return self._return_or_raise(exception.SubscriptionTimeoutError(timeouts))
+                    return self._return_or_raise(
+                        exception.SubscriptionTimeoutError(timeouts)
+                    )
 
             message = DataMessage(await self._ws_resp.receive_bytes())
             ref_id = message.reference_id
@@ -162,12 +197,20 @@ class Streaming:
                 # heartbeat = model_streaming.ResHeartbeat.parse_obj(payload)
                 heartbeat = model_streaming.ResHeartbeat.parse_obj(payload[0])
                 print(f"heartbeat {heartbeat}")
-                self._subscriptions.extend_timeout([h.OriginatingReferenceId for h in heartbeat.Heartbeats])
+                self._subscriptions.extend_timeout(
+                    [h.OriginatingReferenceId for h in heartbeat.Heartbeats]
+                )
 
-                permanently_disables = heartbeat.filter_reasons([HeartbeatReason.SubscriptionPermanentlyDisabled])
+                permanently_disables = heartbeat.filter_reasons(
+                    [HeartbeatReason.SubscriptionPermanentlyDisabled]
+                )
                 if permanently_disables:
                     self._subscriptions.remove_items(reference_ids=permanently_disables)
-                    return self._return_or_raise(exception.SubscriptionPermanentlyDisabledError(permanently_disables))
+                    return self._return_or_raise(
+                        exception.SubscriptionPermanentlyDisabledError(
+                            permanently_disables
+                        )
+                    )
 
             elif ref_id == self._REF_ID_RESETSUBSCRIPTIONS:
                 return self._handle_reset_subscriptions(payload)
@@ -202,7 +245,10 @@ class Streaming:
         return await self._ws_resp.close()
 
     async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
     ) -> bool:
         return await self.disconnect()
 
@@ -253,11 +299,16 @@ class StreamingSession:
         self._streaming: Optional[Streaming] = None
 
     async def connect(self, message_id: Optional[int] = None) -> Streaming:
-        params = model_streaming.ReqConnect(contextid=self._context_id, messageid=message_id).as_request()
+        params = model_streaming.ReqConnect(
+            contextid=self._context_id, messageid=message_id
+        ).as_request()
         headers = auth_header(self.token)
 
         self._streaming = Streaming(
-            await self._ws_client.ws_connect(self._connect_url, params=params, headers=headers), self._subscriptions
+            await self._ws_client.ws_connect(
+                self._connect_url, params=params, headers=headers
+            ),
+            self._subscriptions,
         )
 
         return self._streaming
@@ -310,7 +361,9 @@ class StreamingSession:
         subscription._setup(res.model.InactivityTimeout, snapshot)
 
         # return streamer, next_callback if is_odata else None
-        return _CreateSubscriptionResponse(res.code, reference_id, snapshot, next_callback, res.model.InactivityTimeout)
+        return _CreateSubscriptionResponse(
+            res.code, reference_id, snapshot, next_callback, res.model.InactivityTimeout
+        )
 
     async def chart_charts_subscription_post(
         self,
@@ -336,7 +389,9 @@ class StreamingSession:
 
     async def chart_charts_subscription_delete(self, reference_id):
         print("called")
-        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE.request_model(ContextId=self._context_id, ReferenceId=reference_id)
+        req = endpoint.CHART_CHARTS_SUBSCRIPTIONS_DELETE.request_model(
+            ContextId=self._context_id, ReferenceId=reference_id
+        )
         print(f"req: {req}")
         return await self._user_session.chart_charts_subscription_delete(req)
 
