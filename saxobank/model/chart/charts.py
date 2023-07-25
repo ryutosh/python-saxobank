@@ -62,8 +62,81 @@ class Data:
 from pydantic.dataclasses import dataclass as pyd
 
 
+class SamplePydanticModel(SaxobankModel):
+    """Class short description.
+
+    Class Description
+
+    Attributes:
+        Horizon (int): horizon in minutes.
+        Mode (saxobank.model.common.ChartRequestMode): mode
+        Count (int): num of returns
+
+    """
+
+    Horizon: int
+    Mode: common.ChartRequestMode
+    Count: Optional[int] = None
+
+
+from attrs import define
+
+
+@define
+class SampleAttrs:
+    """Class short description.
+
+    Class Description
+
+    Attributes:
+        Horizon (int): horizon in minutes.
+        Mode (saxobank.model.common.ChartRequestMode): mode
+        Count (int): num of returns
+
+    """
+
+    Horizon: int
+    Mode: common.ChartRequestMode
+    Count: Optional[int] = None
+
+
+@pyd
+class SamplePydanticDataclass:
+    """Class short description.
+
+    Class Description
+
+    Attributes:
+        Horizon (int): horizon in minutes.
+        Mode (saxobank.model.common.ChartRequestMode): mode
+        Count (int): num of returns
+
+    """
+
+    Horizon: int
+    Mode: common.ChartRequestMode
+    Count: Optional[int] = None
+
+
 @dataclass
-# @pyd
+class SampleStandardDataclass:
+    """Class short description.
+
+    Class Description
+
+    Attributes:
+        Horizon (int): horizon in minutes.
+        Mode (saxobank.model.common.ChartRequestMode): mode
+        Count (int): num of returns
+
+    """
+
+    Horizon: int
+    Mode: common.ChartRequestMode
+    Count: Optional[int] = None
+
+
+@dataclass
 class GetReq:
     """Represents service charts request.
 

@@ -8,8 +8,20 @@ from __future__ import annotations
 
 from collections import namedtuple
 from datetime import datetime
-from typing import (Any, Container, Final, Iterator, List, Literal, Optional,
-                    Sequence, Tuple, Type, Union, cast)
+from typing import (
+    Any,
+    Container,
+    Final,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel
@@ -35,7 +47,10 @@ class ODataResponse(BaseModel):
 
         parsed = urlparse(self.next)
         path = str(parsed.path)
-        query = {str.lower(k): v[0] if len(v) == 1 else v for (k, v) in parse_qs(str(parsed.query)).items()}
+        query = {
+            str.lower(k): v[0] if len(v) == 1 else v
+            for (k, v) in parse_qs(str(parsed.query)).items()
+        }
         return self.NextRequest(path, query)
 
     # def next_request(self, request_model: ODataRequest) -> ODataRequest:
@@ -50,7 +65,7 @@ class ODataResponse(BaseModel):
 
 
 class SaxobankModel(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True, extra="forbid")
 
     def __eq__(self, o: Any) -> bool:
         if not isinstance(o, self.__class__):
@@ -149,6 +164,7 @@ class SaxobankRootModel(RootModel[Sequence[SaxobankModel]]):
 
     def __getitem__(self, item: int) -> SaxobankModel:
         return self.root[item]
+
 
 class ErrorResponse(SaxobankModel):
     ErrorCode: str
