@@ -7,7 +7,11 @@ thus, createing models by user-side is not supposed to.
 from __future__ import annotations
 
 from collections import namedtuple
+from dataclasses import dataclass, fields
 from datetime import datetime
+from enum import Enum
+from inspect import get_annotations
+from types import GenericAlias
 from typing import (
     Any,
     Container,
@@ -21,12 +25,38 @@ from typing import (
     Type,
     Union,
     cast,
+    get_type_hints,
 )
 from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel
 
 from .common import ContextId, InlineCountValue, ReferenceId
+
+
+def _checkinstance(name: str, instance: Any, cls: type) -> bool:
+    print(f"check: {name} is {cls}")
+    if not isinstance(instance, cls):
+        raise ValueError(
+            f"Field {name} expected as {cls.__name__}, but {type(instance).__name__} given."
+        )
+    return True
+
+
+@dataclass
+class SaxobankModel2:
+    def __post_init__(self):
+        schema = get_annotations(self.__class__, eval_str=True)
+
+        for field in fields(self):
+            t = schema[field.name]
+            v = getattr(self, field.name)
+
+            if isinstance(t, GenericAlias) and t.__origin__ == list:
+                for i, e in enumerate(v):
+                    _checkinstance(f"{field.name}[{i}]", e, t.__args__[0])
+            else:
+                _checkinstance(field.name, v, t)
 
 
 class ODataRequest(BaseModel):

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import KW_ONLY, dataclass, fields
 from datetime import datetime
-from typing import Any, ClassVar, List, Optional, Set, Tuple, Type
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type, Union
+
+from attrs import define
 
 from saxobank.model import common
 
 from ..base import (
     SaxobankModel,
+    SaxobankModel2,
     SaxobankRootModel,
     _ReqCreateSubscription,
     _ReqRemoveSubscription,
@@ -35,13 +38,29 @@ class ChartInfo:
     FirstSampleTime: Optional[datetime] = None
     DelayedByMinutes: Optional[int] = None
 
+    # def __post_init__(self):
+    #     if not isinstance(self.FirstSampleTime, datetime):
+    #         self.FirstSampleTime = AssetType(self.AssetType)
+
 
 # class ChartSample(SaxobankModel):
 @dataclass
-class ChartSample:
+class ChartSample(SaxobankModel2):
     CloseAsk: float
     CloseBid: float
-    Time: datetime
+    Time: Union[datetime, str]
+
+    def __post_init__(self):
+        for e in fields(self):
+            if e.type == "Union[datetime, str]":
+                value = getattr(self, e.name)
+                if not isinstance(value, datetime):
+                    setattr(self, e.name, datetime.fromisoformat(value))
+
+            elif e.type == "Union[AssetType, str]":
+                value = getattr(self, e.name)
+                if not isinstance(value, AssetType):
+                    setattr(self, e.name, AssetType(value))
 
 
 # class Data(SaxobankRootModel):
@@ -58,84 +77,6 @@ class Data:
 # ****************************************************************
 # Request
 # ****************************************************************
-# class GetReq(SaxobankModel):
-from pydantic.dataclasses import dataclass as pyd
-
-
-class SamplePydanticModel(SaxobankModel):
-    """Class short description.
-
-    Class Description
-
-    Attributes:
-        Horizon (int): horizon in minutes.
-        Mode (saxobank.model.common.ChartRequestMode): mode
-        Count (int): num of returns
-
-    """
-
-    Horizon: int
-    Mode: common.ChartRequestMode
-    Count: Optional[int] = None
-
-
-from attrs import define
-
-
-@define
-class SampleAttrs:
-    """Class short description.
-
-    Class Description
-
-    Attributes:
-        Horizon (int): horizon in minutes.
-        Mode (saxobank.model.common.ChartRequestMode): mode
-        Count (int): num of returns
-
-    """
-
-    Horizon: int
-    Mode: common.ChartRequestMode
-    Count: Optional[int] = None
-
-
-@pyd
-class SamplePydanticDataclass:
-    """Class short description.
-
-    Class Description
-
-    Attributes:
-        Horizon (int): horizon in minutes.
-        Mode (saxobank.model.common.ChartRequestMode): mode
-        Count (int): num of returns
-
-    """
-
-    Horizon: int
-    Mode: common.ChartRequestMode
-    Count: Optional[int] = None
-
-
-@dataclass
-class SampleStandardDataclass:
-    """Class short description.
-
-    Class Description
-
-    Attributes:
-        Horizon (int): horizon in minutes.
-        Mode (saxobank.model.common.ChartRequestMode): mode
-        Count (int): num of returns
-
-    """
-
-    Horizon: int
-    Mode: common.ChartRequestMode
-    Count: Optional[int] = None
-
-
 @dataclass
 class GetReq:
     """Represents service charts request.
@@ -149,34 +90,29 @@ class GetReq:
 
     """
 
-    AssetType: AssetType
+    _: KW_ONLY
+    AssetType: Union[AssetType, str]
     Uic: int
     Horizon: int
     Mode: common.ChartRequestMode
     Count: Optional[int] = None
 
     def __post_init__(self):
-        if not isinstance(self.AssetType, AssetType):
-            if isinstance(self.AssetType, str):
-                self.AssetType = AssetType(self.AssetType)
-            else:
-                raise ValueError("Invalid AssetType")
-        if not isinstance(self.Mode, ChartRequestMode):
-            raise ValueError("Invalid ChartRequestMode")
+        for e in fields(self):
+            if e.type == "Union[datetime, str]":
+                value = getattr(self, e.name)
+                if not isinstance(value, datetime):
+                    setattr(self, e.name, datetime.fromisoformat(value))
 
-    # def __init__(
-    #     self,
-    #     asset_type: AssetType,
-    #     uic: int,
-    #     horizon: int,
-    #     mode: common.ChartRequestMode,
-    #     count: Optional[int] = None,
-    # ):
-    #     self.AssetType = asset_type
-    #     self.Uic = uic
-    #     self.Horizon = horizon
-    #     self.Mode = mode
-    #     self.Count = count
+            elif e.type == "Union[AssetType, str]":
+                value = getattr(self, e.name)
+                if not isinstance(value, AssetType):
+                    setattr(self, e.name, AssetType(value))
+
+        # if not isinstance(self.AssetType, AssetType):
+        #     self.AssetType = AssetType(self.AssetType)
+        # if not isinstance(self.Mode, ChartRequestMode):
+        #     raise ValueError("Invalid ChartRequestMode")
 
 
 class ChartSubscriptionRequest(SaxobankModel):
@@ -205,7 +141,7 @@ class ReqSubscriptionDelete(_ReqRemoveSubscription):
 
 
 @dataclass
-class GetResp:
+class GetResp(SaxobankModel2):
     """Represents conposit model.
 
     Attributes descriptions are referenced from [OpenAPI Reference]: https://www.developer.saxo/openapi/referencedocs/chart/v1/charts/getchartdataasync/387cfc61d3292d9237095b9144ac4733/.
@@ -217,11 +153,26 @@ class GetResp:
 
     """
 
-    # Data: Data
+    Data: list[Union[ChartSample, dict[str, Any]]]
     DataVersion: int
-    ChartInfo: Optional[ChartInfo] = None
+    ChartInfo: Optional[Union[ChartInfo, Dict[str, Any]]] = None
 
     # _partitions: Set[int] = set()
+
+    # def __post_init__(self):
+    #     for e in fields(self):
+    #         if e.type == "Union[datetime, str]":
+    #             value = getattr(self, e.name)
+    #             if not isinstance(value, datetime):
+    #                 setattr(self, e.name, datetime.fromisoformat(value))
+
+    #         elif e.type == "Union[AssetType, str]":
+    #             value = getattr(self, e.name)
+    #             if not isinstance(value, AssetType):
+    #                 setattr(self, e.name, AssetType(value))
+
+    #         elif self.ChartInfo and not isinstance(self.ChartInfo, ChartInfo):
+    #             self.ChartInfo = ChartInfo(**self.ChartInfo)
 
     def apply_delta(self, delta: Any) -> Tuple[ChartResponse, bool]:
         """Example function with types documented in the docstring.

@@ -1,8 +1,16 @@
-from saxobank.model import streaming
 from json import loads
 
+from saxobank.converter import as_request, from_response
+from saxobank.model import streaming
+from saxobank.model.common import HeartbeatReason, ReferenceId
 
-def test_Heartbeats() -> None:
-    exp = loads('{"OriginatingReferenceId": "IP44964", "Reason": "NoNewData"}')
-    mdl = streaming.Heartbeats.model_validate(exp)
-    assert mdl.OriginatingReferenceId == 'IP44964' and mdl.Reason == 'NoNewData'
+exp_Heartbeats = {"OriginatingReferenceId": "IP44964", "Reason": "NoNewData"}
+mdl_Heartbeats = streaming.Heartbeats(**exp_Heartbeats)
+
+
+def test_Heartbeats_serialize() -> None:
+    assert exp_Heartbeats == as_request(mdl_Heartbeats)
+
+
+def test_Heartbeats_deserialize() -> None:
+    assert from_response(exp_Heartbeats, streaming.Heartbeats) == mdl_Heartbeats

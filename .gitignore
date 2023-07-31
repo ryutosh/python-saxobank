@@ -22,8 +22,8 @@ __pycache__
 *.pickle
 
 # development
-*.code-workspace
-.jupyter
+#*.code-workspace
+#.jupyter
 .ipynb_checkpoints
 
 # develop enviroments
@@ -37,5 +37,5 @@ build/
 .tox/
 .cache/
 .pytest_cache/
-.vscode
+#.vscode
 

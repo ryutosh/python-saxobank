@@ -36,8 +36,9 @@ class BuySell(str, Enum):
 
 
 class ChartRequestMode(str, Enum):
-    From = 'From'
-    UpTo = 'UpTo'
+    From = "From"
+    UpTo = "UpTo"
+
 
 class ClientPositionNettingMode(str, Enum):
     EndOfDay = "EndOfDay"
@@ -178,7 +179,14 @@ class PlaceableOrderType(str, Enum):
         # Used to determine ticker price to conform TickerSize/TickerSizeLimitOrder/TickerSizeStopOrder
         return (
             True
-            if self in [self.Stop, self.StopIfTraded, self.StopLimit, self.TrailingStop, self.TrailingStopIfTraded]
+            if self
+            in [
+                self.Stop,
+                self.StopIfTraded,
+                self.StopLimit,
+                self.TrailingStop,
+                self.TrailingStopIfTraded,
+            ]
             else False
         )
 
@@ -279,7 +287,9 @@ class ContextId(str):
     @classmethod
     def validate(cls, v: object) -> bool:
         chars = str(v)
-        return all([c in cls.ACCEPTABLE_CHARS for c in chars]) and (cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH)
+        return all([c in cls.ACCEPTABLE_CHARS for c in chars]) and (
+            cls.MIN_ID_LENGTH <= len(chars) <= cls.MAX_ID_LENGTH
+        )
 
 
 class ReferenceId(str):
@@ -319,8 +329,6 @@ class ResponseCode(Enum):
         return 400 <= self.value
 
 
-
-
 class InlineCountValue(Enum):
     """
     Defines an enumeration for $inlinecount query option values.
@@ -328,6 +336,3 @@ class InlineCountValue(Enum):
 
     ALL_PAGES = "AllPages"  # The results will contain a total count of items in the queried dataset.
     NONE = "None"  # The results will not contain an inline count.
-
-
-

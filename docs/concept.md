@@ -1,7 +1,7 @@
-# Version support
-- Users
+# Which Python version should be supported
+- Pandas; the libary users possibly install, supports more than 3.8.
 
-# Library Consideration
+# Libraries rely on
 ## Pydantic
 Pydantic is an excellent library, but I have noticed some flaws in its grand concept. For instance, in version 2, the official guide suggests overriding the `__iter__` method in the `RootModel` if you want to access it as an iterator. However, despite this recommendation, the annotation for `RootModel` remained as `[str, Any]`, leading to inconvenient type-checking errors when attempting to override `RootModel` as a sequence.
 {image_here}
@@ -54,6 +54,8 @@ class SamplePydanticDataclass(
 
 
 ## attrs
+- If community suddenly closed then couldn't use `@define` anymore oneday, does it able to replace to something? Know what `@define` does? The answer is NO. That's the magic word to make class attrs-able, that's not mean replace-able.
+
 ### Need validators for all fields if validate them all
 That's is obvious way and good behavior and philosophy rather than Pydantic does.
 ```python
