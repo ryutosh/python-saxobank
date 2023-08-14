@@ -9,6 +9,16 @@ from uuid import uuid4
 
 # TODO: Not full covered
 class AssetType(str, Enum):
+    """Asset Type.
+
+    URL: xx
+
+    Attributes:
+        Bond (AssetType): Bond
+        FxSpot (AssetType): FX traded at spot.
+        CfdOnIndex (AssetType): CFD on stock indexes.
+    """
+
     Bond = "Bond"
     FxSpot = "FxSpot"
     FxBinaryOption = "FxBinaryOption"
@@ -334,5 +344,7 @@ class InlineCountValue(Enum):
     Defines an enumeration for $inlinecount query option values.
     """
 
-    ALL_PAGES = "AllPages"  # The results will contain a total count of items in the queried dataset.
+    ALL_PAGES = (
+        "AllPages"  # The results will contain a total count of items in the queried dataset.
+    )
     NONE = "None"  # The results will not contain an inline count.

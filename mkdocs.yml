@@ -1,13 +1,22 @@
-site_name: Python Saxobank
+site_name: "python-saxobank"
 site_url: https://github.com/splashingwholefear/python-saxobank
 repo_name: splashingwholefear/python-saxobank
 repo_url: https://github.com/splashingwholefear/python-saxobank
 nav:
 - Quick Start: quick_start.md
 - Reference:
-  - api_request.md
-  - model.md
+  - API Request:
+    - api/application.md
+    - Chart:
+      - api/chart/index.md
+      - Charts: api/chart/charts.md
+  - "Streaming"
+  - Data Models:
+    - model/common.md
+    - Request Models: model/req.md
+    - model/chart.md
 - For Contributors/Maintainers:
+  - Concept and Decisions: concept.md
   - class_diagram.md
   - Consideration about OpenAPI: saxobank_open_api.md
   - throttle.md
@@ -36,7 +45,8 @@ theme:
     toggle:
       icon: material/brightness-4
       name: "Switch to light mode"
-  # features:
+  features:
+    - navigation.indexes
   #   - content.tabs.link
   #   - content.code.annotate
   #   - announce.dismiss
@@ -51,19 +61,19 @@ plugins:
           paths: [saxobank]
           options:
             # show_bases: false
-            show_source: false
-            show_category_heading: true
+            # show_source: false
+            # show_category_heading: true
             # show_symbol_type_heading: true
             filters: ["!^_"]
-            show_submodules: true
+            # show_submodules: true
             docstring_style: "google"
-            docstring_section_style: "table"
-            merge_init_into_class: true
+            # docstring_section_style: "table"
+            # merge_init_into_class: true
             show_if_no_docstring: true
             annotations_path: brief
             # separate_signature: true
-            show_signature: false
-            show_signature_annotations: false
+            # show_signature: false
+            # show_signature_annotations: false
             # docstring_options:
             #   ignore_init_summary: true
 
@@ -79,13 +89,14 @@ markdown_extensions:
   - md_in_html
   - pymdownx.blocks.admonition
   - pymdownx.blocks.details
+  - pymdownx.snippets:
+      base_path: ['docs']
   - pymdownx.blocks.tab:
       alternate_style: true
   - pymdownx.emoji
   - pymdownx.magiclink
   - pymdownx.highlight:
       use_pygments: false
-  - pymdownx.snippets
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid

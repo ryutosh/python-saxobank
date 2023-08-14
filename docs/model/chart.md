@@ -1,6 +1,7 @@
-::: saxobank.model.common
+::: saxobank.model.chart.charts
     options:
-        show_bases: false
+        show_bases: true
+        show_signature: false
 
 <!-- ## Chart
 ::: saxobank.model.chart

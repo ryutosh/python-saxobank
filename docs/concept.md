@@ -1,5 +1,12 @@
-# Which Python version should be supported
+## Which Python version should be supported
 - Pandas; the libary users possibly install, supports more than 3.8.
+### Functional requirements.
+- inspect.get_annotations requires 3.10.
+
+## Namespaces
+### Model Namespaces
+Since the signature annotations displayed in Pylance hints are not full-qualified but only show class names, it is easier for developers to identify and use configuration models if it belongs directly under the `model` namespace. However, there are cases where same model name is defined differently for different services. Even if that was a simple mistake by Saxobank, it cannot be denied that we potentially have the same kind of problem. Therefore, the configuration models should belong to the namespace of each service group or service, not directly under the `model` namespace.
+![Same InstrumentDisplayAndFormat](image/model_name_difference.png)
 
 # Libraries rely on
 ## Pydantic

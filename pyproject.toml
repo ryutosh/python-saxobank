@@ -8,12 +8,13 @@ readme = "README.md"
 packages = [{include = "saxobank"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 pydantic = "^2.0"  # Remove after migration to attrs
 attrs = "^23.1"
 cattrs = "^23.1"
 aiohttp = "^3.8"
 simplejson = "^3.19"
+typeguard = "^4.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7"
@@ -23,7 +24,7 @@ isort = "^5.12"
 ipykernel = "^6.25"
 mkdocs = "^1.4"
 mkdocs-material = "^9.1"
-mkdocstrings-python = "^1.2"
+mkdocstrings = { version = "^0.22", extras = ["python"] }
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4"
@@ -32,6 +33,9 @@ coverage = "^7.2"
 
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.4"
+
+[tool.black]
+line-length = 100
 
 [tool.mypy]
 show_error_codes = true
@@ -95,7 +99,8 @@ line-length = 128
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-target-version = "py308"
+# target-version = "py308"
+target-version = "py310"
 
 [build-system]
 requires = ["poetry-core"]

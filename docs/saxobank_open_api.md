@@ -35,28 +35,33 @@
 - Use same connector for multiple session.
 
 # Request/Response
-## Model Naming
+## API and Model Naming
 OpenAPI endpoint URLs are basically in form "/servicegroup/version/service/endpoint?queries".
 ### Request models naming
 Request models are layored in package and named as like;
-- servicegroup.service.[Method]Endpoint[Req][IdenticalDescriptionIfDuplicate]
+- servicegroup.service.(Endpoint|IdenticalDescriptionIfDuplicate)Method[Req]
+- req.MethodServicegroupService[Endpoint|IdenticalDescriptionIfDuplicate]
 - Remove path parameters.
-- Only [Method][Req] if no endpoint in URL.
 ```python
 # mkt/v2/instruments/{Uic}/{AssetType}/documents/recommended/?DocumentTypes={DocumentTypes}
 mkt.instruments_v2.GetDocumentsRecommendedReq
+req.GetInstrumentsV2DocumentsRecommended
 ```
 ### Response models naming
 Response models are named;
 - Same as Request model but substitute [Req] to [Resp].
 
-### Compositions in models
+### Naming of Compositions in models
 Request/Response models are composed from several composit models.
 Saxobank OpenAPI reference describes about meaning about these composits with JSON field names.
 These models are named;
 - Same name with JSON field.
 
-### Access Limiting
+### API function naming
+Because of API functions are not in structure of package hieracy, naming of them differ at the point.
+- method_servicegroup_service(_endpoint|_identical_description_if_duplicate)
+
+## Access Limiting
 RFCを参考にしていると思われるので参考に
 https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers
 

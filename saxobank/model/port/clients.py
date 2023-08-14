@@ -1,18 +1,14 @@
 # from datetime import datetime
-from __future__ import annotations
+from dataclasses import dataclass
 
-from ..common import (
-    AccountKey,
-    ClientKey,
-    ClientPositionNettingMode,
-    ClientPositionNettingProfile,
-)
-from ..base import SaxobankModel
+from ..base import SaxobankModel2
+from ..common import AccountKey, ClientKey, ClientPositionNettingMode, ClientPositionNettingProfile
 
 # from urllib.parse import quote
 
 
-class MeRes(SaxobankModel):
+@dataclass
+class MeRes(SaxobankModel2):
     ClientId: str
     ClientKey: ClientKey
     DefaultAccountId: str

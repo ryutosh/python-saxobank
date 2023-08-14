@@ -4,8 +4,6 @@ You can override classes in the modules and make new data models.
 But models are strongly bundled with Endpoint definitions(endpoint.py),
 thus, createing models by user-side is not supposed to.
 """
-from __future__ import annotations
-
 from collections import namedtuple
 from dataclasses import dataclass, fields
 from datetime import datetime
@@ -14,24 +12,24 @@ from inspect import get_annotations
 from types import GenericAlias
 from typing import (
     Any,
+    ClassVar,
     Container,
     Final,
     Iterator,
-    List,
     Literal,
     Optional,
     Sequence,
-    Tuple,
     Type,
-    Union,
     cast,
     get_type_hints,
 )
 from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel
+from typeguard import CollectionCheckStrategy, TypeCheckError, check_type
 
-from .common import ContextId, InlineCountValue, ReferenceId
+from .. import exception
+from .common import ContextId, InlineCountValue, OrderDurationType, ReferenceId
 
 
 def _checkinstance(name: str, instance: Any, cls: type) -> bool:
@@ -43,20 +41,50 @@ def _checkinstance(name: str, instance: Any, cls: type) -> bool:
     return True
 
 
+def ommit_datetime_zero(dt: str) -> datetime:
+    """Less than Python 3.11 can't handle format tailing with 'Z'."""
+    if 1 <= len(dt) and dt[-1] == "Z":
+        return datetime.fromisoformat(dt[:-1])
+    return datetime.fromisoformat(dt)
+
+
 @dataclass
 class SaxobankModel2:
-    def __post_init__(self):
+    _url_route: ClassVar[set[str]] = set()
+
+    def routes(self) -> dict[str, Any]:
+        return {f.name: getattr(self, f.name) for f in fields(self) if f.name in self._url_route}
+
+    def __post_init__(self) -> None:
+        """Called by dataclass init method, then validate data.
+
+        Validation run by type-hints marked on fields of dataclass.
+
+        Raises: ValueError: Value is not comply with type-hints.
+        """
+
         schema = get_annotations(self.__class__, eval_str=True)
 
         for field in fields(self):
-            t = schema[field.name]
-            v = getattr(self, field.name)
+            name = field.name
+            try:
+                check_type(
+                    getattr(self, name),
+                    schema[name],
+                    collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS,
+                )
 
-            if isinstance(t, GenericAlias) and t.__origin__ == list:
-                for i, e in enumerate(v):
-                    _checkinstance(f"{field.name}[{i}]", e, t.__args__[0])
-            else:
-                _checkinstance(field.name, v, t)
+            except TypeCheckError:
+                raise ValueError(f"Invalid value of {name}. Expected {schema[name].__name__}.")
+
+            # t = schema[field.name]
+            # v = getattr(self, field.name)
+
+            # if isinstance(t, GenericAlias) and t.__origin__ == list:
+            #     for i, e in enumerate(v):
+            #         _checkinstance(f"{field.name}[{i}]", e, t.__args__[0])
+            # else:
+            #     _checkinstance(field.name, v, t)
 
 
 class ODataRequest(BaseModel):
@@ -68,7 +96,7 @@ class ODataRequest(BaseModel):
 class ODataResponse(BaseModel):
     count: Optional[int] = Field(alias="__count")
     next: HttpUrl = Field(None, alias="__next")
-    NextRequest: Tuple[str, str] = namedtuple("NextRequest", ["path", "query"])
+    NextRequest: tuple[str, str] = namedtuple("NextRequest", ["path", "query"])
 
     @property
     def next_request(self) -> Optional[NextRequest]:
@@ -121,7 +149,7 @@ class SaxobankModel(BaseModel):
         kwargs.update({"by_alias": True, "exclude_unset": True, "exclude_none": True})
         return super().dict(**kwargs)
 
-    def merge(self, delta: SaxobankModel) -> SaxobankModel:
+    def merge(self, delta) -> "SaxobankModel":
         new = self.dict(exclude_unset=True)
         for key, value in delta.dict().items():
             # if isinstance(value, SaxobankModel):
@@ -203,7 +231,7 @@ class ErrorResponse(SaxobankModel):
 
 
 class OrderDuration(SaxobankModel):
-    DurationType: e.OrderDurationType
+    DurationType: OrderDurationType
     ExpirationDateContainsTime: Optional[bool]
     ExpirationDateTime: Optional[datetime]
 
@@ -215,21 +243,21 @@ class ListResultModel(SaxobankModel):
     count: Optional[int] = Field(alias="__count")
     next: HttpUrl = Field(alias="__next")
     MaxRows: Optional[int]
-    Data: List[Type[SubscriptionSnapshotModel]]
+    # Data: list[Type[SubscriptionSnapshotModel]]
 
-    def apply_delta(self, delta: SubscriptionSnapshotModel):
-        copy = self.Data.copy()
+    # def apply_delta(self, delta: SubscriptionSnapshotModel):
+    #     copy = self.Data.copy()
 
-        try:
-            idx = copy.index(delta)
+    #     try:
+    #         idx = copy.index(delta)
 
-        except ValueError:
-            copy.append(delta)
+    #     except ValueError:
+    #         copy.append(delta)
 
-        else:
-            copy[idx] = copy[idx].apply_delta(delta)
+    #     else:
+    #         copy[idx] = copy[idx].apply_delta(delta)
 
-        return copy
+    #     return copy
 
 
 class _Snapshot(SaxobankModel):

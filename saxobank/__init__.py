@@ -27,6 +27,9 @@
 #     token_refresh_threhold=0.8,
 # )
 
+from . import model
 from .application import Application
 from .environment import AuthBaseUrl, RestBaseUrl, SaxobankEnvironment, WsBaseUrl
 from .user_session import UserSession
+
+__all__ = ["model"]
