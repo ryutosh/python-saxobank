@@ -1,0 +1,112 @@
+site_name: "python-saxobank"
+site_url: https://github.com/ryutosh/python-saxobank
+repo_name: ryutosh/python-saxobank
+repo_url: https://github.com/ryutosh/python-saxobank
+nav:
+- Quick Start: quick_start.md
+- Reference:
+  - API Request:
+    - api/application.md
+    - Chart:
+      - api/chart/index.md
+      - Charts: api/chart/charts.md
+  - "Streaming"
+  - Data Models:
+    - model/common.md
+    - Request Models: model/req.md
+    - model/chart.md
+- For Contributors/Maintainers:
+  - Concept and Decisions: concept.md
+  - class_diagram.md
+  - Consideration about OpenAPI: saxobank_open_api.md
+  - throttle.md
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+  - media: "(prefers-color-scheme)"
+    primary: indigo
+    accent: indigo
+    toggle:
+      icon: material/brightness-auto
+      name: "Switch to light mode"
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: indigo
+    accent: indigo
+    toggle:
+      icon: material/brightness-7
+      name: "Switch to dark mode"
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: pink
+    accent: pink
+    toggle:
+      icon: material/brightness-4
+      name: "Switch to light mode"
+  features:
+    - navigation.indexes
+  #   - content.tabs.link
+  #   - content.code.annotate
+  #   - announce.dismiss
+extra_css:
+  - stylesheet/docstrings.css
+plugins:
+  - autorefs
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [saxobank]
+          options:
+            # show_bases: false
+            # show_source: false
+            # show_category_heading: true
+            # show_symbol_type_heading: true
+            filters: ["!^_"]
+            # show_submodules: true
+            docstring_style: "google"
+            # docstring_section_style: "table"
+            # merge_init_into_class: true
+            show_if_no_docstring: true
+            annotations_path: brief
+            # separate_signature: true
+            # show_signature: false
+            # show_signature_annotations: false
+            # docstring_options:
+            #   ignore_init_summary: true
+
+markdown_extensions:
+  - toc:
+      permalink: 
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - footnotes
+  - md_in_html
+  - pymdownx.blocks.admonition
+  - pymdownx.blocks.details
+  - pymdownx.snippets:
+      base_path: ['docs']
+  - pymdownx.blocks.tab:
+      alternate_style: true
+  - pymdownx.emoji
+  - pymdownx.magiclink
+  - pymdownx.highlight:
+      use_pygments: false
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  # - callouts
+  # - mdx_gh_links:
+  #     user: mkdocs
+  #     repo: mkdocs

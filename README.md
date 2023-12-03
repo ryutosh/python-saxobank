@@ -1,3 +1,7 @@
-# winko-saxobank
+CAUTION! not work, in develop.
 
-- Only support FifoEndOfDay Netting mode https://www.developer.saxo/openapi/learn/position-netting
+# Supports
+python 3.7 or above
+
+# Quick Start
+@import "docs/quick_start.md"

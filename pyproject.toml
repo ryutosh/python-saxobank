@@ -1,0 +1,107 @@
+[tool.poetry]
+name = "python-saxobank"
+version = "0.1.0"
+description = "SaxoBank OpenAPI client"
+authors = ["Toshiya Miyagi <t.miyagi20150929@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "saxobank"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^2.0"  # Remove after migration to attrs
+attrs = "^23.1"
+cattrs = "^23.1"
+aiohttp = "^3.8"
+simplejson = "^3.19"
+typeguard = "^4.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7"
+# flake8 = "^5.0"  # 6.0 requires python3.8.1
+ruff = "^0.0"
+isort = "^5.12"
+ipykernel = "^6.25"
+mkdocs = "^1.4"
+mkdocs-material = "^9.1"
+mkdocstrings = { version = "^0.22", extras = ["python"] }
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4"
+pytest-asyncio = "^0.21"
+coverage = "^7.2"
+
+[tool.poetry.group.typing.dependencies]
+mypy = "^1.4"
+
+[tool.black]
+line-length = 100
+
+[tool.mypy]
+show_error_codes = true
+strict = true
+strict_optional = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+# sample from pydantic
+#follow_imports = "silent"
+#warn_redundant_casts = true
+#warn_unused_ignores = true
+#disallow_any_generics = true
+#check_untyped_defs = true
+#no_implicit_reexport = true
+
+#[tool.pydantic-mypy]
+#init_forbid_extra = true
+#init_typed = true
+#warn_required_dynamic_aliases = true
+
+[tool.ruff]
+# Enable the pycodestyle (`E`) and Pyflakes (`F`) rules by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = ["E", "F", "I"]
+ignore = []
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+per-file-ignores = {}
+
+line-length = 128
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# target-version = "py308"
+target-version = "py310"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
