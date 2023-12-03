@@ -23,7 +23,7 @@ __pycache__
 
 # development
 #*.code-workspace
-#.jupyter
+.jupyter
 .ipynb_checkpoints
 
 # develop enviroments
