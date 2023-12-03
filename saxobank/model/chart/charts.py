@@ -12,7 +12,7 @@ from saxobank.model import common
 from ..base import (
     SaxobankModel,
     SaxobankModel2,
-    SaxobankRootModel,
+    SaxobankRootModel2,
     _ReqCreateSubscription,
     _ReqRemoveSubscription,
     _RespCreateSubscription,
@@ -90,13 +90,13 @@ class ChartSample(SaxobankModel2):
 
 # class Data(SaxobankRootModel):
 @dataclass
-class Data:
+class Data(SaxobankRootModel2):
     """Represents Data.
     Attributes:
         root (list[charts.ChartSample]): Array holding the individual OHLC samples. For Forex Instruments both Bid and Ask values are returned. For other instruments the values are the last traded values.
     """
 
-    _root: List[Union[ChartSample, dict[str, Any]]]
+    _root: list[ChartSample] | list[dict[str, Any]]
 
 
 # ****************************************************************
@@ -148,7 +148,8 @@ class GetResp(SaxobankModel2):
 
     """
 
-    Data: list[Union[ChartSample, dict[str, Any]]]
+    # Data: list[Union[ChartSample, dict[str, Any]]]
+    Data: Data | list[dict[str, Any]]
     DataVersion: int
     ChartInfo: Optional[Union[ChartInfo, Dict[str, Any]]] = None
 

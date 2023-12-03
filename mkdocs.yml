@@ -1,7 +1,7 @@
 site_name: "python-saxobank"
-site_url: https://github.com/splashingwholefear/python-saxobank
-repo_name: splashingwholefear/python-saxobank
-repo_url: https://github.com/splashingwholefear/python-saxobank
+site_url: https://github.com/ryutosh/python-saxobank
+repo_name: ryutosh/python-saxobank
+repo_url: https://github.com/ryutosh/python-saxobank
 nav:
 - Quick Start: quick_start.md
 - Reference:

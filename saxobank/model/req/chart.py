@@ -47,3 +47,4 @@ class GetChartCharts(SaxobankModel2):
             self.Mode = common.ChartRequestMode(self.Mode)
         if self.Time and not isinstance(self.Time, datetime):
             self.Time = ommit_datetime_zero(self.Time)
+

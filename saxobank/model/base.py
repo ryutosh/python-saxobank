@@ -87,6 +87,18 @@ class SaxobankModel2:
             #     _checkinstance(field.name, v, t)
 
 
+class SaxobankRootModel2(Sequence[SaxobankModel2]):
+    """Base class of all list type Saxobank request parameters, response or their composits.
+
+    Class provides iteration for its elements.
+
+    Attributes:
+        None: No public attributes.
+    """
+
+    _root: Sequence[SaxobankModel2] | Sequence[dict[str, Any]]
+
+
 class ODataRequest(BaseModel):
     inlinecount: Optional[InlineCountValue] = None
     top: Optional[int] = Field(alias="$top")
@@ -201,27 +213,6 @@ class SaxobankModel(BaseModel):
     #     use_enum_values = True
     #     alias_generator = str.lower
     #     allow_population_by_field_name = True
-
-
-# class _SaxobankRootModel(RootModel[Any]):
-# class _SaxobankRootModel(RootModel):
-class SaxobankRootModel(RootModel[Sequence[SaxobankModel]]):
-    """Base class of all list type Saxobank request parameters, response or their composits.
-
-    Class provides iteration for its elements.
-
-    Attributes:
-        None: No public attributes.
-    """
-
-    # root: Sequence[SaxobankModel]
-
-    # Reporting: reportIncompatibleMethodOverride may a bug of Pydantic v2.
-    def __iter__(self) -> Iterator[SaxobankModel]:
-        return iter(self.root)
-
-    def __getitem__(self, item: int) -> SaxobankModel:
-        return self.root[item]
 
 
 class ErrorResponse(SaxobankModel):

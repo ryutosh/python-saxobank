@@ -15,7 +15,8 @@ from .environment import LIVE, SIM, SaxobankEnvironment, WsBaseUrl
 from .model import chart, req
 from .model.base import SaxobankModel
 from .model.common import ContextId, ResponseCode
-from .streaming_session import StreamingSession
+
+# from .streaming_session import StreamingSession
 from .user_session import RateLimiter, UserSession, _OpenApiRequestResponse
 
 # from environment import Environment
@@ -71,16 +72,16 @@ class Client:
     ):  # -> Tuple[ResponseCode, Optional[SaxobankModel], Optional[Coroutine]]:
         return self._user_session.openapi_request(endpoint, request_model, access_token)
 
-    def create_streaming_session(
-        self, context_id: Optional[ContextId] = None, access_token: Optional[str] = None
-    ) -> StreamingSession:
-        return StreamingSession(
-            self._ws_base_url,
-            self._user_session,
-            self._user_session.http,
-            access_token if access_token else self._user_session.token,
-            context_id,
-        )
+    # def create_streaming_session(
+    #     self, context_id: Optional[ContextId] = None, access_token: Optional[str] = None
+    # ) -> StreamingSession:
+    #     return StreamingSession(
+    #         self._ws_base_url,
+    #         self._user_session,
+    #         self._user_session.http,
+    #         access_token if access_token else self._user_session.token,
+    #         context_id,
+    #     )
 
     # port_clients_me_get = partialmethod(_openapi_request, endpoint.PORT_CLIENTS_ME_GET)
     # port_closedpositions_get = partialmethod(_openapi_request, endpoint.PORT_CLOSEDPOSITIONS_GET)
